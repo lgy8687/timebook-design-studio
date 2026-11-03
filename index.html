@@ -14,7 +14,7 @@
     .header-inner { max-width: 920px; margin: auto; padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     h1 { font-size: 20px; margin: 0; }
     .header-label { font-size: 12px; color: #637886; }
-    main { max-width: 1100px; margin: auto; padding: 24px 20px 60px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 360px); gap: 28px; align-items: start; }
+    main { max-width: 1200px; margin: auto; padding: 24px 20px 60px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 1fr); gap: 28px; align-items: start; }
     h2 { margin: 0 0 14px; font-size: 16px; }
     .options { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
     .option { display: grid; justify-items: start; align-content: start; gap: 12px; padding: 16px; background: #fff; border: 1px solid #dfe7e8; border-radius: 8px; min-width: 0; }
@@ -32,7 +32,7 @@
     .variant-f .preview button + button { border-left: 1px solid var(--border-color, #002fa7); }
     .editor { min-width: 0; }
     .editor h2:not(:first-child) { margin-top: 26px; }
-    aside { position: sticky; top: 16px; min-width: 0; }
+    aside { min-width: 0; }
     .example-panel { padding: 20px; background: #fff; border: 1px solid #dfe7e8; border-radius: 8px; }
     .example-panel > p { margin: 0 0 18px; color: #637886; font-size: 13px; line-height: 1.6; }
     .current { display: grid; justify-items: start; gap: 14px; padding: 18px; background: #f5f7f8; border: 1px solid #dfe7e8; border-radius: 8px; }
@@ -48,7 +48,7 @@
     .view-tabs button { min-height: 38px; padding: 6px 12px; border: 0; border-radius: 6px; background: transparent; color: #536978; font-size: 13px; }
     .view-tabs button[aria-selected="true"] { background: #fff; color: #253e4b; box-shadow: 0 1px 3px #0002; }
     [hidden] { display: none !important; }
-    #report-view { display: block; max-width: 640px; padding: 16px 16px 80px; }
+    #report-view { max-width: 640px; margin: auto; }
     .mock-status { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; background: #fff; border: 1px solid #e0e6ed; border-radius: 8px; }
     .mock-status small, .mock-label { display: block; color: #718398; font-size: 12px; }
     .mock-status strong { font-size: 16px; }
@@ -72,7 +72,7 @@
   </style>
 </head>
 <body>
-<header><div class="header-inner"><h1>设计模块</h1><div class="view-tabs" role="tablist" aria-label="页面"><button type="button" data-view="studio" role="tab" aria-selected="true">设计</button><button type="button" data-view="report" role="tab" aria-selected="false">统计预览</button></div></div></header>
+<header><div class="header-inner"><h1>设计模块</h1></div></header>
 <main id="studio-view">
   <section class="editor"><h2>选择样式</h2><div id="options" class="options"></div>
     <h2>调整参数</h2>
@@ -89,18 +89,18 @@
     <p id="feedback" class="summary" role="status"></p>
   </section>
   <aside class="example-panel">
-    <h2>实时示例</h2>
-    <p>选择样式或调整参数后，这里的示例会同步变化。点击选项可查看选中效果。</p>
-    <div id="current" class="current" aria-label="当前样式预览"></div>
-  </aside>
-</main>
-<main id="report-view" hidden>
+    <h2>统计页面预览</h2>
+    <p>示意数据仅用于展示。左侧调整会同步应用到预览中的选择框。</p>
+    <div id="current" class="current" aria-label="当前样式预览" hidden></div>
+<div id="report-view">
   <div class="mock-status"><div><small>ACTIVE</small><strong>办公</strong></div><strong class="mock-timer">02:35:18</strong></div>
   <div id="mock-report" class="variant-a">
     <div class="mock-toolbar"><div id="mock-kind"></div><div id="mock-period"></div><div class="mock-date"><span>‹</span><span>2026年10月</span><span>›</span></div></div>
     <section class="mock-panel"><div class="mock-panel-head"><h2>时间结构</h2><div id="mock-structure"></div></div><div class="mock-ring"><div class="mock-ring-inner">24<small>小时</small></div></div><span class="mock-label">活动分类</span><div id="mock-legend-mode"></div><div class="mock-legend"><div><span>工作</span><span>8h　33%</span></div><div><span>生活</span><span>6h　25%</span></div></div></section>
     <section class="mock-panel"><div class="mock-panel-head"><h2>00:00–12:00</h2></div><div class="mock-track"></div><div class="mock-scale"><span>00:00</span><span>03:00</span><span>06:00</span><span>09:00</span><span>12:00</span></div></section>
   </div>
+</div>
+  </aside>
 </main>
 <script>
 (() => {
@@ -164,13 +164,6 @@
   [['mock-kind',['时间','事件']],['mock-period',['日报','周报','月报','年报']],['mock-structure',['主线','并行']],['mock-legend-mode',['活动分类','活动明细']]].forEach(([id, labels]) => {
     document.getElementById(id).appendChild(preview(labels, labels.join('、')));
   });
-  document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => {
-    const report = button.dataset.view === 'report';
-    document.getElementById('studio-view').hidden = report;
-    document.getElementById('report-view').hidden = !report;
-    document.querySelectorAll('[data-view]').forEach(item => item.setAttribute('aria-selected', String(item === button)));
-    window.scrollTo(0, 0);
-  }));
   drawOptions(); drawCurrent(); update();
 })();
 </script>
