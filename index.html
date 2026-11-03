@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>设计模块</title>
+  <style>
+    :root { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; color: #273d4c; background: #f5f7f8; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    header { background: #fff; border-bottom: 1px solid #dfe7e8; }
+    .header-inner { max-width: 920px; margin: auto; padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    h1 { font-size: 20px; margin: 0; }
+    .header-label { font-size: 12px; color: #637886; }
+    main { max-width: 920px; margin: auto; padding: 24px 20px 60px; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 28px; align-items: start; }
+    h2 { margin: 0 0 14px; font-size: 16px; }
+    .options { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+    .option { display: grid; justify-items: start; align-content: start; gap: 12px; padding: 16px; background: #fff; border: 1px solid #dfe7e8; border-radius: 8px; min-width: 0; }
+    .option-heading { display: flex; gap: 9px; align-items: center; min-height: 30px; font-size: 14px; font-weight: 650; }
+    .option-heading input { width: 18px; height: 18px; accent-color: #526a91; }
+    .preview { display: inline-grid; grid-auto-columns: 1fr; grid-auto-flow: column; gap: var(--gap, 2px); max-width: 100%; padding: 2px; border: var(--border, 1px) solid var(--border-color, #002fa7); border-radius: 999px; background: #fff; }
+    .preview button { min-width: 0; min-height: var(--height, 32px); padding: 2px 8px; border: 0; border-radius: 999px; background: transparent; color: #273d4c; font-size: var(--font, 12px); line-height: 1.2; white-space: nowrap; }
+    .preview button[aria-pressed="true"] { background: var(--color, #526a91); color: #fff; }
+    .variant-b .preview { background: #edf1f4; border-color: transparent; }
+    .variant-c .preview { border-color: transparent; padding: 0; }
+    .variant-d .preview button[aria-pressed="true"] { background: #fff; color: var(--color, #526a91); box-shadow: inset 0 0 0 2px var(--color, #526a91); }
+    .variant-e .preview button[aria-pressed="true"] { background: color-mix(in srgb, var(--color, #526a91) 16%, white); color: #24384b; }
+    .variant-f .preview { gap: 0; padding: 0; overflow: hidden; }
+    .variant-f .preview button { border-radius: 0; }
+    .variant-f .preview button + button { border-left: 1px solid var(--border-color, #002fa7); }
+    aside { position: sticky; top: 16px; }
+    .current { display: grid; justify-items: start; gap: 10px; padding: 14px; background: #fff; border: 1px solid #dfe7e8; border-radius: 8px; }
+    .controls label { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; min-height: 58px; padding: 10px 0; border-bottom: 1px solid #dfe7e8; font-size: 14px; }
+    .controls input[type="range"] { grid-column: 1 / -1; width: 100%; accent-color: #526a91; }
+    .controls input[type="color"] { width: 48px; height: 40px; padding: 2px; background: #fff; border: 1px solid #dfe7e8; border-radius: 6px; }
+    output, .summary { color: #637886; font-size: 13px; }
+    .summary { line-height: 1.6; overflow-wrap: anywhere; }
+    .actions { display: flex; gap: 8px; }
+    .actions button { min-height: 44px; padding: 8px 14px; border: 1px solid #b7c6ca; border-radius: 6px; background: #fff; color: #304b57; }
+    button:focus-visible, input:focus-visible { outline: 2px solid #277c69; outline-offset: 2px; }
+    @media (max-width: 650px) { main { display: flex; flex-direction: column; padding: 18px 16px 48px; gap: 24px; } main > section, aside { width: 100%; } .options { grid-template-columns: 1fr; } aside { position: static; } .current { position: sticky; top: 0; z-index: 2; } }
+  </style>
+</head>
+<body>
+<header><div class="header-inner"><h1>设计模块</h1><span class="header-label">胶囊选择框</span></div></header>
+<main>
+  <section><h2>样式</h2><div id="options" class="options"></div></section>
+  <aside>
+    <h2>调整</h2><div id="current" class="current" aria-label="当前样式预览"></div>
+    <div id="controls" class="controls">
+      <label>字号 <output data-output="font"></output><input type="range" data-key="font" min="12" max="18"></label>
+      <label>高度 <output data-output="height"></output><input type="range" data-key="height" min="30" max="48"></label>
+      <label>边框粗细 <output data-output="border"></output><input type="range" data-key="border" min="0" max="3"></label>
+      <label>选项间距 <output data-output="gap"></output><input type="range" data-key="gap" min="0" max="8"></label>
+      <label>选中颜色 <input type="color" data-key="color" aria-label="选中颜色"></label>
+      <label>边框颜色 <input type="color" data-key="borderColor" aria-label="边框颜色"></label>
+    </div>
+    <p id="summary" class="summary" aria-live="polite"></p>
+    <div class="actions"><button type="button" id="copy">复制方案</button><button type="button" id="reset">恢复默认</button></div>
+    <p id="feedback" class="summary" role="status"></p>
+  </aside>
+</main>
+<script>
+(() => {
+  const key = 'capsule-design-studio-v1';
+  const defaults = { variant:'A', font:12, height:32, border:1, gap:2, color:'#526a91', borderColor:'#002fa7' };
+  const variants = [['A','描边实心'],['B','浅底实心'],['C','无框实心'],['D','双层描边'],['E','浅色选中'],['F','分隔胶囊']];
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch (_) {}
+  let draft = { ...defaults, ...saved };
+  const options = document.getElementById('options'), current = document.getElementById('current'), controls = document.getElementById('controls');
+  function preview(labels, name) {
+    const group = document.createElement('div'); group.className = 'preview'; group.setAttribute('role','group'); group.setAttribute('aria-label', name);
+    labels.forEach((label, index) => {
+      const button = document.createElement('button'); button.type = 'button'; button.textContent = label; button.setAttribute('aria-pressed', String(index === 0));
+      button.addEventListener('click', () => group.querySelectorAll('button').forEach(item => item.setAttribute('aria-pressed', String(item === button))));
+      group.appendChild(button);
+    });
+    return group;
+  }
+  function makePreviews(host, id) {
+    host.className += ' variant-' + id.toLowerCase();
+    host.append(preview(['时间','事件'], '两项切换预览'), preview(['日报','周报','月报','年报'], '四项切换预览'));
+  }
+  function drawOptions() {
+    options.replaceChildren();
+    variants.forEach(([id, title]) => {
+      const card = document.createElement('article'); card.className = 'option';
+      const label = document.createElement('label'); label.className = 'option-heading';
+      const radio = document.createElement('input'); radio.type = 'radio'; radio.name = 'variant'; radio.value = id; radio.checked = draft.variant === id;
+      radio.addEventListener('change', () => { draft.variant = id; drawCurrent(); update(); });
+      const text = document.createElement('span'); text.textContent = id + '  ' + title;
+      label.append(radio, text); card.appendChild(label); makePreviews(card, id); options.appendChild(card);
+    });
+  }
+  function drawCurrent() { current.replaceChildren(); current.className = 'current'; makePreviews(current, draft.variant); }
+  function update() {
+    for (const name of ['font','height','border','gap']) {
+      const input = controls.querySelector('[data-key="' + name + '"]');
+      const value = Math.max(Number(input.min), Math.min(Number(input.max), Number(draft[name]) || 0));
+      draft[name] = value; input.value = value; document.querySelector('[data-output="' + name + '"]').textContent = value + 'px';
+      document.documentElement.style.setProperty('--' + name, value + 'px');
+    }
+    for (const name of ['color','borderColor']) {
+      if (!/^#[0-9a-f]{6}$/i.test(draft[name])) draft[name] = defaults[name];
+      controls.querySelector('[data-key="' + name + '"]').value = draft[name];
+      document.documentElement.style.setProperty(name === 'color' ? '--color' : '--border-color', draft[name]);
+    }
+    document.getElementById('summary').textContent = '已选择 ' + draft.variant + ' · 字号 ' + draft.font + 'px · 高度 ' + draft.height + 'px · 边框 ' + draft.border + 'px · 间距 ' + draft.gap + 'px · 选中 ' + draft.color + ' · 边框 ' + draft.borderColor;
+    try { localStorage.setItem(key, JSON.stringify(draft)); } catch (_) {}
+  }
+  if (!variants.some(([id]) => id === draft.variant)) draft.variant = defaults.variant;
+  controls.querySelectorAll('[data-key]').forEach(input => input.addEventListener('input', () => { draft[input.dataset.key] = input.value; update(); }));
+  document.getElementById('reset').addEventListener('click', () => { draft = { ...defaults }; drawOptions(); drawCurrent(); update(); });
+  document.getElementById('copy').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(document.getElementById('summary').textContent); document.getElementById('feedback').textContent = '方案已复制'; }
+    catch (_) { document.getElementById('feedback').textContent = '复制未成功，可直接选择上方方案文字。'; }
+  });
+  drawOptions(); drawCurrent(); update();
+})();
+</script>
+</body>
+</html>
