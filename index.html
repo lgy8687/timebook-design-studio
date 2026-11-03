@@ -40,12 +40,36 @@
     .actions { display: flex; gap: 8px; }
     .actions button { min-height: 44px; padding: 8px 14px; border: 1px solid #b7c6ca; border-radius: 6px; background: #fff; color: #304b57; }
     button:focus-visible, input:focus-visible { outline: 2px solid #277c69; outline-offset: 2px; }
+    .view-tabs { display: flex; gap: 4px; padding: 3px; border-radius: 8px; background: #edf1f4; }
+    .view-tabs button { min-height: 38px; padding: 6px 12px; border: 0; border-radius: 6px; background: transparent; color: #536978; font-size: 13px; }
+    .view-tabs button[aria-selected="true"] { background: #fff; color: #253e4b; box-shadow: 0 1px 3px #0002; }
+    [hidden] { display: none !important; }
+    #report-view { display: block; max-width: 640px; padding: 16px 16px 80px; }
+    .mock-status { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; background: #fff; border: 1px solid #e0e6ed; border-radius: 8px; }
+    .mock-status small, .mock-label { display: block; color: #718398; font-size: 12px; }
+    .mock-status strong { font-size: 16px; }
+    .mock-timer { font-size: 22px; color: #526a91; font-variant-numeric: tabular-nums; }
+    .mock-toolbar { display: grid; justify-items: center; gap: 8px; padding: 18px 0 14px; border-bottom: 1px solid #dfe7e8; }
+    .mock-date { display: flex; justify-content: space-between; align-items: center; width: 100%; color: #65788a; font-size: 13px; }
+    .mock-date span:first-child, .mock-date span:last-child { display: grid; place-items: center; width: 44px; height: 44px; font-size: 24px; }
+    .mock-panel { margin-top: 16px; padding: 18px; background: #fff; border: 1px solid #e0e6ed; border-radius: 8px; }
+    .mock-panel-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .mock-panel-head h2 { margin: 0; font-size: 15px; }
+    .mock-ring { display: grid; place-items: center; width: 176px; aspect-ratio: 1; margin: 30px auto; border-radius: 50%; background: conic-gradient(#526a91 0 30%, #40a88d 30% 52%, #f3a231 52% 76%, #dce4ed 76%); }
+    .mock-ring-inner { display: grid; place-content: center; text-align: center; width: 64%; aspect-ratio: 1; border-radius: 50%; background: #fff; font-size: 22px; font-weight: 700; }
+    .mock-ring-inner small { font-size: 12px; color: #718398; font-weight: 400; }
+    .mock-legend { display: grid; gap: 10px; margin-top: 16px; }
+    .mock-legend div { display: flex; justify-content: space-between; color: #526779; font-size: 14px; }
+    .mock-legend span:first-child::before { content: ''; display: inline-block; width: 9px; height: 9px; margin-right: 8px; border-radius: 50%; background: #40a88d; }
+    .mock-legend div:nth-child(2) span:first-child::before { background: #f3a231; }
+    .mock-track { height: 34px; margin: 16px 0; border-radius: 6px; background: linear-gradient(to right, #dce4ed 0 18%, #f3a231 18% 45%, #526a91 45% 76%, #40a88d 76%); }
+    .mock-scale { display: flex; justify-content: space-between; color: #718398; font-size: 12px; }
     @media (max-width: 650px) { main { display: flex; flex-direction: column; padding: 18px 16px 48px; gap: 24px; } main > section, aside { width: 100%; } .options { grid-template-columns: 1fr; } aside { position: static; } .current { position: sticky; top: 0; z-index: 2; } }
   </style>
 </head>
 <body>
-<header><div class="header-inner"><h1>设计模块</h1><span class="header-label">胶囊选择框</span></div></header>
-<main>
+<header><div class="header-inner"><h1>设计模块</h1><div class="view-tabs" role="tablist" aria-label="页面"><button type="button" data-view="studio" role="tab" aria-selected="true">设计</button><button type="button" data-view="report" role="tab" aria-selected="false">统计预览</button></div></div></header>
+<main id="studio-view">
   <section><h2>样式</h2><div id="options" class="options"></div></section>
   <aside>
     <h2>调整</h2><div id="current" class="current" aria-label="当前样式预览"></div>
@@ -61,6 +85,14 @@
     <div class="actions"><button type="button" id="copy">复制方案</button><button type="button" id="reset">恢复默认</button></div>
     <p id="feedback" class="summary" role="status"></p>
   </aside>
+</main>
+<main id="report-view" hidden>
+  <div class="mock-status"><div><small>ACTIVE</small><strong>办公</strong></div><strong class="mock-timer">02:35:18</strong></div>
+  <div id="mock-report" class="variant-a">
+    <div class="mock-toolbar"><div id="mock-kind"></div><div id="mock-period"></div><div class="mock-date"><span>‹</span><span>2026年10月</span><span>›</span></div></div>
+    <section class="mock-panel"><div class="mock-panel-head"><h2>时间结构</h2><div id="mock-structure"></div></div><div class="mock-ring"><div class="mock-ring-inner">24<small>小时</small></div></div><span class="mock-label">活动分类</span><div id="mock-legend-mode"></div><div class="mock-legend"><div><span>工作</span><span>8h　33%</span></div><div><span>生活</span><span>6h　25%</span></div></div></section>
+    <section class="mock-panel"><div class="mock-panel-head"><h2>00:00–12:00</h2></div><div class="mock-track"></div><div class="mock-scale"><span>00:00</span><span>03:00</span><span>06:00</span><span>09:00</span><span>12:00</span></div></section>
+  </div>
 </main>
 <script>
 (() => {
@@ -95,7 +127,10 @@
       label.append(radio, text); card.appendChild(label); makePreviews(card, id); options.appendChild(card);
     });
   }
-  function drawCurrent() { current.replaceChildren(); current.className = 'current'; makePreviews(current, draft.variant); }
+  function drawCurrent() {
+    current.replaceChildren(); current.className = 'current'; makePreviews(current, draft.variant);
+    const report = document.getElementById('mock-report'); report.className = 'variant-' + draft.variant.toLowerCase();
+  }
   function update() {
     for (const name of ['font','height','border','gap']) {
       const input = controls.querySelector('[data-key="' + name + '"]');
@@ -118,6 +153,16 @@
     try { await navigator.clipboard.writeText(document.getElementById('summary').textContent); document.getElementById('feedback').textContent = '方案已复制'; }
     catch (_) { document.getElementById('feedback').textContent = '复制未成功，可直接选择上方方案文字。'; }
   });
+  [['mock-kind',['时间','事件']],['mock-period',['日报','周报','月报','年报']],['mock-structure',['主线','并行']],['mock-legend-mode',['活动分类','活动明细']]].forEach(([id, labels]) => {
+    document.getElementById(id).appendChild(preview(labels, labels.join('、')));
+  });
+  document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => {
+    const report = button.dataset.view === 'report';
+    document.getElementById('studio-view').hidden = report;
+    document.getElementById('report-view').hidden = !report;
+    document.querySelectorAll('[data-view]').forEach(item => item.setAttribute('aria-selected', String(item === button)));
+    window.scrollTo(0, 0);
+  }));
   drawOptions(); drawCurrent(); update();
 })();
 </script>
