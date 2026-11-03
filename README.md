@@ -6,7 +6,7 @@
 - 公开仓库：<https://github.com/lgy8687/timebook-design-studio>
 - 网页地址：<https://lgy8687.github.io/timebook-design-studio/>
 - 当前入口：`index.html`，单文件 HTML，包含 CSS 与 JavaScript，可直接用浏览器打开。
-- `studio.html` 是独立的中文自由设计工作台试用版，使用 GrapesJS 和 daisyUI；可添加外框、按钮、卡片和 SVG 图标，点选画布内容后调整样式并将草稿保存在本浏览器。它尚未连接统计预览或时间记录 App。
+- `studio.html` 是独立的中文自由设计工作台试用版，使用 GrapesJS 和 daisyUI；提供六种按钮组模板，可添加外框、按钮、卡片和 SVG 图标，点选画布内容后调整样式并将草稿保存在本浏览器。它尚未连接统计预览或时间记录 App。
 - 第三方代码及许可保存在 `vendor/`，GrapesJS 为 BSD 3-Clause，daisyUI 为 MIT。
 
 这是独立项目，不是时间记录 App 的一部分；不要在未明确授权的情况下修改、发布或迁移时间记录 App 的数据。
