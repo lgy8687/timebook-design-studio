@@ -355,7 +355,7 @@
   </head>
   <body>
     <header>
-      <h1>统一设计工作台 <small>· v0.6.4</small></h1>
+      <h1>统一设计工作台 <small>· v0.6.5</small></h1>
       <a href="studio.html">原设计原型</a><a href="canvas.html">原自由画布</a><button id="save">保存草稿</button
       ><button id="reset">新建空白</button>
     </header>
@@ -407,7 +407,7 @@
           </div>
         </div>
         <p class="hint">
-          点选或框选对象后，在选中对象（或容器内部空白处）按住左键拖动即可移动；框选/多选后拖任意选中对象可整体一起移动，容器与内部元素作为一组联动。拖动单个对象靠近其他对象或容器边缘/中心时自动吸附并显示粉色对齐参考线。在大画布空白处按住左键拖动框选，碰到即选中。选择手形工具拖动画布视野；预览模式可点击按钮、按钮组和图标查看示例反馈。
+          点选或框选对象后，在选中对象（或容器内部空白处）按住左键拖动即可移动；框选/多选后拖任意选中对象可整体一起移动，容器与内部元素作为一组联动。拖动对象时自动显示对齐参考线：边缘对齐（左右/上下）、中心点对齐（横向/纵向）、以及三个对象间距相等时的等间距分布线。在大画布空白处按住左键拖动框选，碰到即选中。选择手形工具拖动画布视野；预览模式可点击按钮、按钮组和图标查看示例反馈。
         </p>
       </main>
       <aside class="side right">
@@ -1044,66 +1044,125 @@
           overlay.find(".guide").forEach((n) => n.destroy());
           const thr = 5 / zoom;
           const isBoard = g.hasName("board");
+          // 世界坐标下移动对象的包围盒
           const rect = isBoard
             ? { x: g.x(), y: g.y(), w: g.width(), h: g.height() }
-            : g.getClientRect({ relativeTo: layer });
-          // 世界坐标下的吸附目标线
-          let tx = [],
-            ty = [];
+            : (() => {
+                const r = g.getClientRect({ relativeTo: layer });
+                return { x: r.x, y: r.y, w: r.width, h: r.height };
+              })();
+          // 收集所有「其他对象」的包围盒（世界坐标），用于边缘对齐与等间距检测
+          const others = [];
           boards().forEach((ob) => {
-            tx.push(ob.x(), ob.x() + ob.width() / 2, ob.x() + ob.width());
-            ty.push(ob.y(), ob.y() + ob.height() / 2, ob.y() + ob.height());
+            if (ob === g) return;
+            others.push({ l: ob.x(), t: ob.y(), r: ob.x() + ob.width(), b: ob.y() + ob.height() });
           });
           items().forEach((n) => {
             if (n === g) return;
             const r = n.getClientRect({ relativeTo: layer });
-            tx.push(r.x, r.x + r.width / 2, r.x + r.width);
-            ty.push(r.y, r.y + r.height / 2, r.y + r.height);
+            others.push({ l: r.x, t: r.y, r: r.x + r.width, b: r.y + r.height });
           });
-          const apply = (axis, targets, size) => {
-            let best = null;
-            const cur = axis === "x" ? rect.x : rect.y;
-            for (const t of targets)
-              for (const off of [0, size / 2, size]) {
-                const delta = t - (cur + off);
-                if (Math.abs(delta) < thr && (!best || Math.abs(delta) < Math.abs(best.delta)))
-                  best = { t, delta };
-              }
-            if (!best) return null;
-            if (isBoard) {
-              if (axis === "x") g.x(g.x() + best.delta);
-              else g.y(g.y() + best.delta);
-              redrawBoard(g);
-            } else {
-              if (axis === "x") g.x(g.x() + best.delta);
-              else g.y(g.y() + best.delta);
-            }
-            return best.t;
+          // 关键线坐标集合（左/中/右、上/中/下）
+          const xs = [],
+            ys = [];
+          others.forEach((o) => {
+            xs.push(o.l, (o.l + o.r) / 2, o.r);
+            ys.push(o.t, (o.t + o.b) / 2, o.b);
+          });
+          // 大画布可视范围边缘与中心
+          const vw = stage.width() / zoom,
+            vh = stage.height() / zoom;
+          xs.push(0, vw / 2, vw);
+          ys.push(0, vh / 2, vh);
+
+          // 移动对象的三个对齐点
+          const selfX = [rect.x, rect.x + rect.w / 2, rect.x + rect.w];
+          const selfY = [rect.y, rect.y + rect.h / 2, rect.y + rect.h];
+
+          // 施加位移（沿某轴一次）；只有容器才需要同步背景层
+          const shift = (axis, delta) => {
+            if (axis === "x") g.x(g.x() + delta);
+            else g.y(g.y() + delta);
+            if (isBoard) redrawBoard(g);
           };
-          const bx = apply("x", tx, rect.w);
-          const by = apply("y", ty, rect.h);
-          if (bx !== null)
+          // 画一条贯穿画布的对齐线
+          const line = (axis, t) =>
             overlay.add(
               new Konva.Line({
                 name: "guide",
-                points: [bx, -stage.y() / zoom, bx, (-stage.y() + stage.height()) / zoom],
+                points:
+                  axis === "x"
+                    ? [t, -stage.y() / zoom, t, (-stage.y() + stage.height()) / zoom]
+                    : [-stage.x() / zoom, t, (-stage.x() + stage.width()) / zoom, t],
                 stroke: "#e26ca7",
                 strokeWidth: 1 / zoom,
                 dash: [4 / zoom, 3 / zoom],
                 listening: false,
               }),
             );
-          if (by !== null)
-            overlay.add(
-              new Konva.Line({
-                name: "guide",
-                points: [-stage.x() / zoom, by, (-stage.x() + stage.width()) / zoom, by],
-                stroke: "#e26ca7",
-                strokeWidth: 1 / zoom,
-                dash: [4 / zoom, 3 / zoom],
-                listening: false,
-              }),
-            );
+
+          // —— 1) 边缘/中心对齐：左中右、上中下 分别找最近目标，满足阈值即吸附 + 画线 ——
+          const solve = (selfPoints, targets, axis) => {
+            let best = null;
+            const hits = [];
+            for (const sp of selfPoints) {
+              for (const t of targets) {
+                const delta = t - sp;
+                if (Math.abs(delta) < thr) {
+                  hits.push({ t, delta });
+                  if (!best || Math.abs(delta) < Math.abs(best.delta)) best = { t, delta };
+                }
+              }
+            }
+            if (!best) return;
+            shift(axis, best.delta);
+            const seen = new Set();
+            for (const h of hits) {
+              const key = Math.round(h.t * 10);
+              if (seen.has(key)) continue;
+              seen.add(key);
+              line(axis, h.t);
+            }
+          };
+          solve(selfX, xs, "x");
+          solve(selfY, ys, "y");
+
+          // —— 2) 等间距分布：移动对象居中于两个相邻对象之间（Figma 智能参考线）——
+          // 对 X 轴：移动对象左/中/右 落在左邻右邻正中间；对 Y 轴同理。
+          const equidistant = (selfPoints, axis, getL, getR) => {
+            // 收集其他对象在该轴上的边缘坐标（去重）
+            const edges = [];
+            others.forEach((o) => {
+              edges.push(getL(o), getR(o));
+            });
+            const uniq = [...new Set(edges)].sort((a, b) => a - b);
+            for (const sp of selfPoints) {
+              // 找最近的两个边缘：一个在 sp 左侧，一个在 sp 右侧
+              let left = null,
+                right = null;
+              for (const e of uniq) {
+                if (e < sp - 0.01) left = e;
+                else if (e > sp + 0.01) {
+                  right = e;
+                  break;
+                }
+              }
+              if (left === null || right === null) continue;
+              const d1 = sp - left,
+                d2 = right - sp;
+              if (Math.abs(d1 - d2) < thr) {
+                // 等距命中：吸附到正中间，画两条等距线
+                const delta = (left + right) / 2 - sp;
+                shift(axis, delta);
+                line(axis, left);
+                line(axis, right);
+                return; // 等距命中一次即可
+              }
+            }
+          };
+          equidistant(selfX, "x", (o) => o.l, (o) => o.r);
+          equidistant(selfY, "y", (o) => o.t, (o) => o.b);
+
           overlay.batchDraw();
         }
         function updateLayers() {
