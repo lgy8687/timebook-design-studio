@@ -355,7 +355,7 @@
   </head>
   <body>
     <header>
-      <h1>统一设计工作台 <small>· v0.6.2</small></h1>
+      <h1>统一设计工作台 <small>· v0.6.3</small></h1>
       <a href="studio.html">原设计原型</a><a href="canvas.html">原自由画布</a><button id="save">保存草稿</button
       ><button id="reset">新建空白</button>
     </header>
@@ -407,7 +407,7 @@
           </div>
         </div>
         <p class="hint">
-          在空白处或容器内按住左键拖动框选，碰到即选中；拖动容器顶部的名称条可移动容器。选择手形工具拖动画布视野；预览模式可点击按钮、按钮组和图标查看示例反馈。
+          点选或框选对象后，在选中对象（或容器内部空白处）按住左键拖动即可移动；框选/多选后拖任意选中对象可整体一起移动。在大画布空白处按住左键拖动框选，碰到即选中。选择手形工具拖动画布视野；预览模式可点击按钮、按钮组和图标查看示例反馈。
         </p>
       </main>
       <aside class="side right">
@@ -532,8 +532,8 @@
           marqueeStart = null,
           marqueeBoard = null,
           panStart = null,
-          tabDrag = null,
           dragStart = null,
+          dragMoved = false,
           counter = 0;
         const stage = new Konva.Stage({
             container: "canvas",
@@ -724,6 +724,15 @@
             height: 26,
             fill: "rgba(0,0,0,0.001)",
           });
+          const body = new Konva.Rect({
+            name: "board-body",
+            x: 0,
+            y: 0,
+            width: d.width,
+            height: d.height,
+            fill: "rgba(0,0,0,0.001)",
+          });
+          b.add(body);
           b.add(tab);
           b.add(
             new Konva.Text({
@@ -744,15 +753,35 @@
           tab.on("mousedown touchstart", (e) => {
             if (preview || tool === "pan") return;
             e.cancelBubble = true;
+            const move = selection.includes(b) ? selection.slice() : [b];
+            setSelection(move);
             const p = coords();
-            tabDrag = { board: b, px: p.x, py: p.y, bx: b.x(), by: b.y() };
-            setSelection([b]);
+            dragStart = {
+              px: p.x,
+              py: p.y,
+              nodes: move.map((n) => ({ n, x: n.x(), y: n.y() })),
+            };
+            dragMoved = false;
           });
-          tab.on("mouseenter", () => {
-            if (!preview && tool === "select") $("viewport").style.cursor = "move";
-          });
-          tab.on("mouseleave", () => {
-            if (tool === "select") $("viewport").style.cursor = "default";
+          b.on("mousedown touchstart", (e) => {
+            if (preview || tool === "pan") return;
+            if (e.target.hasName("board-tab")) return;
+            activeBoard = b;
+            if (!selection.includes(b)) {
+              const p = coords();
+              dragStart = { px: p.x, py: p.y, nodes: [{ n: b, x: b.x(), y: b.y() }] };
+              dragMoved = false;
+              setSelection([b]);
+            } else {
+              const p = coords();
+              dragStart = {
+                px: p.x,
+                py: p.y,
+                nodes: selection.map((n) => ({ n, x: n.x(), y: n.y() })),
+              };
+              dragMoved = false;
+            }
+            updateLayers();
           });
           activeBoard = b;
           transformer.moveToTop();
@@ -917,15 +946,26 @@
             pressed: !!d.pressed,
             buttonStyle: d.buttonStyle || "solid",
             chartStyle: d.chartStyle || "donut",
-            draggable: !preview,
           });
           host.add(g);
           drawItem(g);
           g.on("mousedown touchstart", (e) => {
+            if (preview || tool === "pan") return;
             e.cancelBubble = true;
+            if (e.evt && e.evt.shiftKey) return;
+            const move = selection.includes(g) ? selection.slice() : [g];
+            if (!selection.includes(g)) setSelection([g]);
+            const p = coords();
+            dragStart = {
+              px: p.x,
+              py: p.y,
+              nodes: move.map((n) => ({ n, x: n.x(), y: n.y() })),
+            };
+            dragMoved = false;
           });
           g.on("click tap", (e) => {
             e.cancelBubble = true;
+            if (dragMoved) return;
             if (preview) {
               if (g.attrs.type === "group") {
                 let p = g.getRelativePointerPosition(),
@@ -947,35 +987,6 @@
             if (e.evt.shiftKey)
               setSelection(selection.includes(g) ? selection.filter((v) => v !== g) : [...selection, g]);
             else if (!selection.includes(g)) setSelection([g]);
-          });
-          g.on("dragstart", (e) => {
-            e.cancelBubble = true;
-            if (!selection.includes(g)) setSelection([g]);
-            dragStart = selection
-              .filter((n) => n.hasName("item") && n.getParent() === g.getParent())
-              .map((n) => ({ n, x: n.x(), y: n.y() }));
-          });
-          g.on("dragmove", (e) => {
-            e.cancelBubble = true;
-            if (!dragStart) return;
-            const origin = dragStart.find((o) => o.n === g);
-            if (!origin) return;
-            let dx = g.x() - origin.x,
-              dy = g.y() - origin.y;
-            dragStart.forEach((o) => {
-              if (o.n !== g) o.n.position({ x: o.x + dx, y: o.y + dy });
-            });
-            if (dragStart.length === 1) snap(g, parentBoard(g));
-            updateSummary();
-            positionQuick();
-          });
-          g.on("dragend", (e) => {
-            e.cancelBubble = true;
-            if (dragStart && dragStart.length === 1) moveToContainer(g);
-            dragStart = null;
-            overlay.find(".guide").forEach((n) => n.destroy());
-            overlay.draw();
-            refresh();
           });
           g.on("transformend", () => {
             g.width(Math.max(20, g.width() * g.scaleX()));
@@ -1208,6 +1219,17 @@
         function hit(n) {
           return n === stage || n.hasName("canvas-bg") || n.hasName("board-bg");
         }
+        function dragTarget(node) {
+          // 返回按下的节点是否应启动拖动，以及要拖动的节点集
+          if (!node || node === stage) return null;
+          if (node.hasName("board-body") || node.hasName("board-tab")) {
+            const b = node.getParent();
+            return b ? { move: [b] } : null;
+          }
+          const g = node.hasName("item") ? node : node.findAncestor(".item");
+          if (g) return { move: selection.includes(g) ? selection.slice() : [g] };
+          return null;
+        }
         stage.on("mousedown touchstart", (e) => {
           if (preview) return;
           if (tool === "pan") {
@@ -1215,30 +1237,50 @@
             panStart = { x: p.x, y: p.y, stageX: stage.x(), stageY: stage.y() };
             return;
           }
-          if (!hit(e.target)) return;
-          marqueeBoard = e.target.hasName("board-bg")
-            ? Array.from(boardBackgrounds.entries()).find(([, back]) => back === e.target)?.[0] || null
-            : null;
-          marqueeStart = coords();
-          marquee.setAttrs({ x: marqueeStart.x, y: marqueeStart.y, width: 0, height: 0, visible: true });
-          overlay.draw();
-        });
-        stage.on("mousemove touchmove", () => {
-          if (tabDrag) {
-            const p = coords();
-            tabDrag.board.position({ x: tabDrag.bx + p.x - tabDrag.px, y: tabDrag.by + p.y - tabDrag.py });
-            redrawBoard(tabDrag.board);
-            layer.batchDraw();
-            positionQuick();
-            updateSummary();
+          if (hit(e.target)) {
+            marqueeBoard = e.target.hasName("board-bg")
+              ? Array.from(boardBackgrounds.entries()).find(([, back]) => back === e.target)?.[0] || null
+              : null;
+            marqueeStart = coords();
+            marquee.setAttrs({ x: marqueeStart.x, y: marqueeStart.y, width: 0, height: 0, visible: true });
+            overlay.draw();
             return;
           }
+          const target = dragTarget(e.target);
+          if (!target) return;
+          if (!selection.includes(target.move[0])) setSelection(target.move);
+          else if (target.move.length > 1) setSelection(target.move);
+          const p = coords();
+          dragStart = {
+            px: p.x,
+            py: p.y,
+            nodes: target.move.map((n) => ({ n, x: n.x(), y: n.y() })),
+          };
+          dragMoved = false;
+        });
+        stage.on("mousemove touchmove", () => {
           if (panStart) {
             const p = stage.getPointerPosition();
             stage.position({ x: panStart.stageX + p.x - panStart.x, y: panStart.stageY + p.y - panStart.y });
             coverBackground();
             stage.batchDraw();
             positionQuick();
+            return;
+          }
+          if (dragStart) {
+            const p = coords();
+            const dx = p.x - dragStart.px,
+              dy = p.y - dragStart.py;
+            if (Math.abs(dx) > 1 || Math.abs(dy) > 1) dragMoved = true;
+            dragStart.nodes.forEach((o) => {
+              o.n.position({ x: o.x + dx, y: o.y + dy });
+            });
+            dragStart.nodes.forEach((o) => {
+              if (o.n.hasName("board")) redrawBoard(o.n);
+            });
+            layer.batchDraw();
+            positionQuick();
+            updateSummary();
             return;
           }
           if (!marqueeStart) return;
@@ -1252,13 +1294,18 @@
           overlay.batchDraw();
         });
         stage.on("mouseup touchend", () => {
-          if (tabDrag) {
-            tabDrag = null;
-            refresh();
-            return;
-          }
           if (panStart) {
             panStart = null;
+            return;
+          }
+          if (dragStart) {
+            const nodes = dragStart.nodes;
+            if (dragMoved && nodes.length === 1 && !nodes[0].n.hasName("board")) moveToContainer(nodes[0].n);
+            dragStart = null;
+            dragMoved = false;
+            overlay.find(".guide").forEach((n) => n.destroy());
+            overlay.draw();
+            refresh();
             return;
           }
           if (!marqueeStart) return;
@@ -1356,6 +1403,7 @@
             n.draggable(!preview && !pan);
           });
           boards().forEach((n) => {
+            n.draggable(!preview && !pan);
             const tab = n.findOne(".board-tab");
             if (tab) tab.listening(!pan);
           });
@@ -1494,6 +1542,7 @@
           $("previewMode").setAttribute("aria-pressed", String(on));
           $("quick").hidden = on || !selection.length;
           items().forEach((n) => n.draggable(!on && tool === "select"));
+          boards().forEach((n) => n.draggable(!on && tool === "select"));
           transformer.nodes([]);
           if (!on) transformer.nodes(selection.filter((n) => !n.hasName("board")));
           $("status").textContent = on ? "交互预览：点击按钮组、按钮或图标查看示例反馈。" : "设计模式：可移动和编辑。";
