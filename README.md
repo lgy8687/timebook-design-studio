@@ -6,6 +6,7 @@
 - 公开仓库：<https://github.com/lgy8687/timebook-design-studio>
 - 网页地址：<https://lgy8687.github.io/timebook-design-studio/>
 - 当前入口：`index.html`，单文件 HTML，包含 CSS 与 JavaScript，可直接用浏览器打开。
+- `unified.html` 是统一工作台第一稿：支持添加多个手机画板、把模块放到选定画板、框选和拖动、对齐辅助线、右侧参数、按钮组交互预览和复制所选参数。选择画板时，复制内容包括其内部元素。画板尺寸是可修改的参考值；外框嵌套、真实 App 界面导入、自适应约束、完整图标及图表库尚未实现。草稿保存在当前浏览器独立键 `timebook-unified-workspace-v1`，与两个原型互不自动迁移。
 - `studio.html` 是独立的中文自由设计工作台试用版，使用 GrapesJS 和 daisyUI；可添加外框、按钮、卡片和 SVG 图标，点选画布内容后在右侧分组调整布局、尺寸、留白、文字与外观，并将草稿保存在本浏览器。它尚未连接统计预览或时间记录 App。
 - `canvas.html` 是基于 Konva 的自由画布第一稿：可拖动对象、碰到即选中的框选、Shift 多选、自动对齐参考线、调整单项参数、复制所选参数和保存本地草稿；提供参考手机尺寸及自定义尺寸。元素暂为独立对象，外框尚不能容纳或关联子元素，图标和图表为示例。画布坐标尚不是手机自适应布局规则。
 - 第三方代码及许可保存在 `vendor/`，GrapesJS 为 BSD 3-Clause，daisyUI 和 Konva 为 MIT。
