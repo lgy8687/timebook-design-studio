@@ -14,7 +14,7 @@
     .header-inner { max-width: 920px; margin: auto; padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     h1 { font-size: 20px; margin: 0; }
     .header-label { font-size: 12px; color: #637886; }
-    main { max-width: 920px; margin: auto; padding: 24px 20px 60px; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 28px; align-items: start; }
+    main { max-width: 1100px; margin: auto; padding: 24px 20px 60px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 360px); gap: 28px; align-items: start; }
     h2 { margin: 0 0 14px; font-size: 16px; }
     .options { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
     .option { display: grid; justify-items: start; align-content: start; gap: 12px; padding: 16px; background: #fff; border: 1px solid #dfe7e8; border-radius: 8px; min-width: 0; }
@@ -30,8 +30,12 @@
     .variant-f .preview { gap: 0; padding: 0; overflow: hidden; }
     .variant-f .preview button { border-radius: 0; }
     .variant-f .preview button + button { border-left: 1px solid var(--border-color, #002fa7); }
-    aside { position: sticky; top: 16px; }
-    .current { display: grid; justify-items: start; gap: 10px; padding: 14px; background: #fff; border: 1px solid #dfe7e8; border-radius: 8px; }
+    .editor { min-width: 0; }
+    .editor h2:not(:first-child) { margin-top: 26px; }
+    aside { position: sticky; top: 16px; min-width: 0; }
+    .example-panel { padding: 20px; background: #fff; border: 1px solid #dfe7e8; border-radius: 8px; }
+    .example-panel > p { margin: 0 0 18px; color: #637886; font-size: 13px; line-height: 1.6; }
+    .current { display: grid; justify-items: start; gap: 14px; padding: 18px; background: #f5f7f8; border: 1px solid #dfe7e8; border-radius: 8px; }
     .controls label { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; min-height: 58px; padding: 10px 0; border-bottom: 1px solid #dfe7e8; font-size: 14px; }
     .controls input[type="range"] { grid-column: 1 / -1; width: 100%; accent-color: #526a91; }
     .controls input[type="color"] { width: 48px; height: 40px; padding: 2px; background: #fff; border: 1px solid #dfe7e8; border-radius: 6px; }
@@ -64,15 +68,14 @@
     .mock-legend div:nth-child(2) span:first-child::before { background: #f3a231; }
     .mock-track { height: 34px; margin: 16px 0; border-radius: 6px; background: linear-gradient(to right, #dce4ed 0 18%, #f3a231 18% 45%, #526a91 45% 76%, #40a88d 76%); }
     .mock-scale { display: flex; justify-content: space-between; color: #718398; font-size: 12px; }
-    @media (max-width: 650px) { main { display: flex; flex-direction: column; padding: 18px 16px 48px; gap: 24px; } main > section, aside { width: 100%; } .options { grid-template-columns: 1fr; } aside { position: static; } .current { position: sticky; top: 0; z-index: 2; } }
+    @media (max-width: 650px) { main { display: flex; flex-direction: column; padding: 18px 16px 48px; gap: 24px; } main > section, aside { width: 100%; } .options { grid-template-columns: 1fr; } aside { position: static; } }
   </style>
 </head>
 <body>
 <header><div class="header-inner"><h1>设计模块</h1><div class="view-tabs" role="tablist" aria-label="页面"><button type="button" data-view="studio" role="tab" aria-selected="true">设计</button><button type="button" data-view="report" role="tab" aria-selected="false">统计预览</button></div></div></header>
 <main id="studio-view">
-  <section><h2>样式</h2><div id="options" class="options"></div></section>
-  <aside>
-    <h2>调整</h2><div id="current" class="current" aria-label="当前样式预览"></div>
+  <section class="editor"><h2>选择样式</h2><div id="options" class="options"></div>
+    <h2>调整参数</h2>
     <div id="controls" class="controls">
       <label>字号 <output data-output="font"></output><input type="range" data-key="font" min="12" max="18"></label>
       <label>高度 <output data-output="height"></output><input type="range" data-key="height" min="30" max="48"></label>
@@ -84,6 +87,11 @@
     <p id="summary" class="summary" aria-live="polite"></p>
     <div class="actions"><button type="button" id="copy">复制方案</button><button type="button" id="reset">恢复默认</button></div>
     <p id="feedback" class="summary" role="status"></p>
+  </section>
+  <aside class="example-panel">
+    <h2>实时示例</h2>
+    <p>选择样式或调整参数后，这里的示例会同步变化。点击选项可查看选中效果。</p>
+    <div id="current" class="current" aria-label="当前样式预览"></div>
   </aside>
 </main>
 <main id="report-view" hidden>
