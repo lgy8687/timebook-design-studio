@@ -355,7 +355,7 @@
   </head>
   <body>
     <header>
-      <h1>统一设计工作台 <small>· v0.6.3</small></h1>
+      <h1>统一设计工作台 <small>· v0.6.4</small></h1>
       <a href="studio.html">原设计原型</a><a href="canvas.html">原自由画布</a><button id="save">保存草稿</button
       ><button id="reset">新建空白</button>
     </header>
@@ -407,7 +407,7 @@
           </div>
         </div>
         <p class="hint">
-          点选或框选对象后，在选中对象（或容器内部空白处）按住左键拖动即可移动；框选/多选后拖任意选中对象可整体一起移动。在大画布空白处按住左键拖动框选，碰到即选中。选择手形工具拖动画布视野；预览模式可点击按钮、按钮组和图标查看示例反馈。
+          点选或框选对象后，在选中对象（或容器内部空白处）按住左键拖动即可移动；框选/多选后拖任意选中对象可整体一起移动，容器与内部元素作为一组联动。拖动单个对象靠近其他对象或容器边缘/中心时自动吸附并显示粉色对齐参考线。在大画布空白处按住左键拖动框选，碰到即选中。选择手形工具拖动画布视野；预览模式可点击按钮、按钮组和图标查看示例反馈。
         </p>
       </main>
       <aside class="side right">
@@ -756,10 +756,11 @@
             const move = selection.includes(b) ? selection.slice() : [b];
             setSelection(move);
             const p = coords();
+            const nodes = dragNodes();
             dragStart = {
               px: p.x,
               py: p.y,
-              nodes: move.map((n) => ({ n, x: n.x(), y: n.y() })),
+              nodes: nodes.map((n) => ({ n, x: n.x(), y: n.y() })),
             };
             dragMoved = false;
           });
@@ -767,20 +768,15 @@
             if (preview || tool === "pan") return;
             if (e.target.hasName("board-tab")) return;
             activeBoard = b;
-            if (!selection.includes(b)) {
-              const p = coords();
-              dragStart = { px: p.x, py: p.y, nodes: [{ n: b, x: b.x(), y: b.y() }] };
-              dragMoved = false;
-              setSelection([b]);
-            } else {
-              const p = coords();
-              dragStart = {
-                px: p.x,
-                py: p.y,
-                nodes: selection.map((n) => ({ n, x: n.x(), y: n.y() })),
-              };
-              dragMoved = false;
-            }
+            if (!selection.includes(b)) setSelection([b]);
+            const p = coords();
+            const nodes = dragNodes();
+            dragStart = {
+              px: p.x,
+              py: p.y,
+              nodes: nodes.map((n) => ({ n, x: n.x(), y: n.y() })),
+            };
+            dragMoved = false;
             updateLayers();
           });
           activeBoard = b;
@@ -953,13 +949,13 @@
             if (preview || tool === "pan") return;
             e.cancelBubble = true;
             if (e.evt && e.evt.shiftKey) return;
-            const move = selection.includes(g) ? selection.slice() : [g];
             if (!selection.includes(g)) setSelection([g]);
             const p = coords();
+            const nodes = dragNodes();
             dragStart = {
               px: p.x,
               py: p.y,
-              nodes: move.map((n) => ({ n, x: n.x(), y: n.y() })),
+              nodes: nodes.map((n) => ({ n, x: n.x(), y: n.y() })),
             };
             dragMoved = false;
           });
@@ -1046,46 +1042,68 @@
         }
         function snap(g, b) {
           overlay.find(".guide").forEach((n) => n.destroy());
-          if (!b) {
-            overlay.batchDraw();
-            return;
-          }
-          let tx = [0, b.width() / 2, b.width()],
-            ty = [0, b.height() / 2, b.height()];
-          b.find(".item").forEach((n) => {
-            if (n !== g) {
-              tx.push(n.x(), n.x() + n.width() / 2, n.x() + n.width());
-              ty.push(n.y(), n.y() + n.height() / 2, n.y() + n.height());
-            }
+          const thr = 5 / zoom;
+          const isBoard = g.hasName("board");
+          const rect = isBoard
+            ? { x: g.x(), y: g.y(), w: g.width(), h: g.height() }
+            : g.getClientRect({ relativeTo: layer });
+          // 世界坐标下的吸附目标线
+          let tx = [],
+            ty = [];
+          boards().forEach((ob) => {
+            tx.push(ob.x(), ob.x() + ob.width() / 2, ob.x() + ob.width());
+            ty.push(ob.y(), ob.y() + ob.height() / 2, ob.y() + ob.height());
           });
-          for (const [axis, targets, size] of [
-            ["x", tx, g.width()],
-            ["y", ty, g.height()],
-          ]) {
+          items().forEach((n) => {
+            if (n === g) return;
+            const r = n.getClientRect({ relativeTo: layer });
+            tx.push(r.x, r.x + r.width / 2, r.x + r.width);
+            ty.push(r.y, r.y + r.height / 2, r.y + r.height);
+          });
+          const apply = (axis, targets, size) => {
             let best = null;
+            const cur = axis === "x" ? rect.x : rect.y;
             for (const t of targets)
               for (const off of [0, size / 2, size]) {
-                let delta = t - g[axis]() - off;
-                if (Math.abs(delta) < 5 / zoom && (!best || Math.abs(delta) < Math.abs(best.delta)))
+                const delta = t - (cur + off);
+                if (Math.abs(delta) < thr && (!best || Math.abs(delta) < Math.abs(best.delta)))
                   best = { t, delta };
               }
-            if (best) {
-              g[axis](g[axis]() + best.delta);
-              const t = best.t;
-              overlay.add(
-                new Konva.Line({
-                  name: "guide",
-                  points:
-                    axis === "x"
-                      ? [b.x() + t, b.y(), b.x() + t, b.y() + b.height()]
-                      : [b.x(), b.y() + t, b.x() + b.width(), b.y() + t],
-                  stroke: "#e26ca7",
-                  strokeWidth: 1 / zoom,
-                  dash: [4, 3],
-                }),
-              );
+            if (!best) return null;
+            if (isBoard) {
+              if (axis === "x") g.x(g.x() + best.delta);
+              else g.y(g.y() + best.delta);
+              redrawBoard(g);
+            } else {
+              if (axis === "x") g.x(g.x() + best.delta);
+              else g.y(g.y() + best.delta);
             }
-          }
+            return best.t;
+          };
+          const bx = apply("x", tx, rect.w);
+          const by = apply("y", ty, rect.h);
+          if (bx !== null)
+            overlay.add(
+              new Konva.Line({
+                name: "guide",
+                points: [bx, -stage.y() / zoom, bx, (-stage.y() + stage.height()) / zoom],
+                stroke: "#e26ca7",
+                strokeWidth: 1 / zoom,
+                dash: [4 / zoom, 3 / zoom],
+                listening: false,
+              }),
+            );
+          if (by !== null)
+            overlay.add(
+              new Konva.Line({
+                name: "guide",
+                points: [-stage.x() / zoom, by, (-stage.x() + stage.width()) / zoom, by],
+                stroke: "#e26ca7",
+                strokeWidth: 1 / zoom,
+                dash: [4 / zoom, 3 / zoom],
+                listening: false,
+              }),
+            );
           overlay.batchDraw();
         }
         function updateLayers() {
@@ -1224,11 +1242,18 @@
           if (!node || node === stage) return null;
           if (node.hasName("board-body") || node.hasName("board-tab")) {
             const b = node.getParent();
-            return b ? { move: [b] } : null;
+            if (!b) return null;
+            return { move: selection.includes(b) ? selection.slice() : [b] };
           }
           const g = node.hasName("item") ? node : node.findAncestor(".item");
           if (g) return { move: selection.includes(g) ? selection.slice() : [g] };
           return null;
+        }
+        function dragNodes() {
+          // 过滤掉父容器也在选中集里的子元素，避免双重位移
+          return selection.filter(
+            (n) => !selection.some((p) => p !== n && p.hasName("board") && parentBoard(n) === p),
+          );
         }
         stage.on("mousedown touchstart", (e) => {
           if (preview) return;
@@ -1251,10 +1276,11 @@
           if (!selection.includes(target.move[0])) setSelection(target.move);
           else if (target.move.length > 1) setSelection(target.move);
           const p = coords();
+          const nodes = dragNodes();
           dragStart = {
             px: p.x,
             py: p.y,
-            nodes: target.move.map((n) => ({ n, x: n.x(), y: n.y() })),
+            nodes: nodes.map((n) => ({ n, x: n.x(), y: n.y() })),
           };
           dragMoved = false;
         });
@@ -1275,6 +1301,7 @@
             dragStart.nodes.forEach((o) => {
               o.n.position({ x: o.x + dx, y: o.y + dy });
             });
+            if (dragStart.nodes.length === 1) snap(dragStart.nodes[0].n, parentBoard(dragStart.nodes[0].n));
             dragStart.nodes.forEach((o) => {
               if (o.n.hasName("board")) redrawBoard(o.n);
             });
@@ -1400,10 +1427,9 @@
           $("panTool").setAttribute("aria-pressed", String(pan));
           items().forEach((n) => {
             n.listening(!pan);
-            n.draggable(!preview && !pan);
           });
           boards().forEach((n) => {
-            n.draggable(!preview && !pan);
+            n.listening(!pan);
             const tab = n.findOne(".board-tab");
             if (tab) tab.listening(!pan);
           });
@@ -1541,8 +1567,6 @@
           $("designMode").setAttribute("aria-pressed", String(!on));
           $("previewMode").setAttribute("aria-pressed", String(on));
           $("quick").hidden = on || !selection.length;
-          items().forEach((n) => n.draggable(!on && tool === "select"));
-          boards().forEach((n) => n.draggable(!on && tool === "select"));
           transformer.nodes([]);
           if (!on) transformer.nodes(selection.filter((n) => !n.hasName("board")));
           $("status").textContent = on ? "交互预览：点击按钮组、按钮或图标查看示例反馈。" : "设计模式：可移动和编辑。";
