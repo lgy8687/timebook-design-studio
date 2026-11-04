@@ -370,7 +370,7 @@
   </head>
   <body>
     <header>
-      <h1>统一设计工作台 <small>· v0.9.0</small></h1>
+      <h1>统一设计工作台 <small>· v0.9.1</small></h1>
       <a href="studio.html">原设计原型</a><a href="canvas.html">原自由画布</a><button id="undo" disabled>撤销</button><button id="redo" disabled>重做</button><small id="saveState" role="status">本地草稿</small><button id="save">保存草稿</button
       ><button id="reset">新建空白</button>
     </header>
@@ -388,6 +388,16 @@
           <label>API 密钥<input id="agentKey" type="password" autocomplete="off" style="width:100%" /></label>
           <label><input id="agentUseModel" type="checkbox" /> 识别时发送截图到此服务</label>
         </details>
+        <label>识别范围<select id="analysisScope"><option value="all">整张截图</option><option value="region">框选一个功能区</option></select></label>
+        <dialog id="regionPicker" aria-labelledby="regionTitle">
+          <h3 id="regionTitle">拖动框出要分析的部分</h3>
+          <div style="position:relative;width:fit-content;margin:auto">
+            <img id="regionImage" alt="供框选的截图" draggable="false" style="display:block;max-height:65vh;max-width:75vw;touch-action:none;cursor:crosshair">
+            <div id="regionBox" hidden style="position:absolute;pointer-events:none;border:2px solid #2788d3;background:#2788d322;box-sizing:border-box"></div>
+          </div>
+          <p class="hint">仅分析框内内容。可以重新拖动调整范围。</p>
+          <button id="regionCancel">取消</button> <button id="regionApply">分析所选区域</button>
+        </dialog>
         <button id="agentAnalyze" type="button" style="width:100%;margin-top:8px">2. 分析截图生成草稿</button>
         <p id="agentStatus" class="hint" role="status">识别在浏览器中进行；首次使用需要联网下载识别工具和语言包。</p>
         <h2>添加模块</h2>
@@ -2113,6 +2123,42 @@
             radius: Math.max(0, Math.min(300, Number(element.radius) || 0)) * fx,
             fontSize: Math.max(8, Math.min(72, (Number(element.fontSize) || 16) * fy)) };
         }
+        function chooseRegion(image) {
+          const dialog = $("regionPicker"), preview = $("regionImage"), box = $("regionBox");
+          const apply = $("regionApply");
+          preview.src = image.src;
+          box.hidden = true; apply.disabled = true;
+          let start = null, rect = null;
+          function point(e) {
+            const r = preview.getBoundingClientRect();
+            return { x: Math.round(Math.max(0, Math.min(1, (e.clientX-r.left)/r.width))*image.width),
+                     y: Math.round(Math.max(0, Math.min(1, (e.clientY-r.top)/r.height))*image.height) };
+          }
+          function update(e) {
+            if (!start) return;
+            const end = point(e);
+            rect = { x: Math.min(start.x,end.x), y: Math.min(start.y,end.y),
+                     w: Math.abs(start.x-end.x), h: Math.abs(start.y-end.y) };
+            Object.assign(box.style, { left: rect.x/image.width*100+"%", top: rect.y/image.height*100+"%",
+              width: rect.w/image.width*100+"%", height: rect.h/image.height*100+"%" });
+            box.hidden = false;
+            apply.disabled = rect.w < 4 || rect.h < 4;
+          }
+          preview.onpointerdown = e => {
+            if (!e.isPrimary || e.button !== 0) return;
+            preview.setPointerCapture(e.pointerId); start = point(e); update(e);
+          };
+          preview.onpointermove = update;
+          preview.onpointerup = e => { update(e); start = null; };
+          preview.onpointercancel = () => { start = null; };
+          $("regionCancel").onclick = () => dialog.close("cancel");
+          apply.onclick = () => dialog.close("apply");
+          dialog.returnValue = "";
+          return new Promise(resolve => {
+            dialog.onclose = () => resolve(dialog.returnValue === "apply" ? rect : null);
+            dialog.showModal();
+          });
+        }
         $("agentAnalyze").onclick = async () => {
           const selected = selection.length === 1 && selection[0].getAttr("type") === "image" ? selection[0] : null;
           const item = selected || agentImage;
@@ -2123,30 +2169,45 @@
           agentBusy = true; $("agentAnalyze").disabled = true;
           let worker;
           try {
+            const image = await loadImage(item.getAttr("imageData"));
+            let input = image.src, offsetX = 0, offsetY = 0, inputWidth = image.width, inputHeight = image.height;
+            if ($("analysisScope").value === "region") {
+              const rect = await chooseRegion(image);
+              if (!rect) return agentMessage("已取消框选。");
+              offsetX = rect.x; offsetY = rect.y; inputWidth = rect.w; inputHeight = rect.h;
+              const crop = document.createElement("canvas");
+              crop.width = rect.w; crop.height = rect.h;
+              crop.getContext("2d").drawImage(image, rect.x, rect.y, rect.w, rect.h, 0, 0, rect.w, rect.h);
+              input = crop.toDataURL("image/png");
+            }
             agentMessage("正在加载识别工具，首次使用需要下载中文语言包，请稍候……");
             await loadOcr();
             worker = await Tesseract.createWorker("chi_sim+eng", 1, { logger: (m) => {
               if (m.status === "recognizing text") agentMessage("正在识别文字：" + Math.round((m.progress || 0) * 100) + "%");
             }});
-            const result = await worker.recognize(item.getAttr("imageData"), {}, { blocks: true });
+            const result = await worker.recognize(input, {}, { blocks: true });
             const lines = (result.data.blocks || []).flatMap(b => b.paragraphs || []).flatMap(p => p.lines || [])
               .filter(line => line.text && line.text.trim() && line.bbox);
             if (!lines.length && !$("agentUseModel").checked) return agentMessage("没有识别到文字。可以换一张更清晰的截图后重试。");
-            const image = await loadImage(item.getAttr("imageData"));
             let elements = null;
             if ($("agentUseModel").checked) {
               agentMessage("正在将截图发送到你配置的模型服务并分析，请稍候……");
-              elements = await analyzeWithModel(item.getAttr("imageData"), image.width, image.height, lines);
+              elements = await analyzeWithModel(input, inputWidth, inputHeight, lines);
               if (!elements.length) throw new Error("模型没有识别出可用元素；可取消模型选项，先生成文字草稿。");
             }
+            if (!item.getStage() || parentBoard(item) !== sourceBoard) return agentMessage("截图已移动或删除，请重新选择后分析。");
+            let draftX = sourceBoard.x() + sourceBoard.width() + 80;
+            for (const other of boards().sort((a,b) => a.x()-b.x())) {
+              if (other.y() < sourceBoard.y()+sourceBoard.height() && other.y()+other.height() > sourceBoard.y() && other.x() < draftX+sourceBoard.width() && other.x()+other.width() > draftX) draftX = other.x()+other.width()+80;
+            }
             const draft = addBoard({ width: sourceBoard.width(), height: sourceBoard.height(),
-              x: sourceBoard.x() + sourceBoard.width() + 80, y: sourceBoard.y(), itemName: elements ? "识别草稿（模型）" : "识别草稿（文字）" });
+              x: draftX, y: sourceBoard.y(), itemName: elements ? "识别草稿（模型）" : "识别草稿（文字）" });
             const fx = item.width() / image.width, fy = item.height() / image.height;
-            if (elements) elements.forEach(element => addItem(draft, modelItem(element, item, image)));
+            if (elements) elements.forEach(element => addItem(draft, modelItem({...element, x: element.x + offsetX, y: element.y + offsetY}, item, image)));
             else for (const line of lines.slice(0, 300)) {
               const box = line.bbox, height = Math.max(10, (box.y1 - box.y0) * fy);
               addItem(draft, { ...defaults.text, type: "text", itemName: "识别文字", ocrText: true,
-                label: line.text.trim(), x: item.x() + box.x0 * fx, y: item.y() + box.y0 * fy,
+                label: line.text.trim().replace(/(?<=\p{Script=Han})[ \t]+(?=\p{Script=Han})/gu, ""), x: item.x() + (offsetX + box.x0) * fx, y: item.y() + (offsetY + box.y0) * fy,
                 width: Math.max(20, (box.x1 - box.x0) * fx + 8), height: Math.max(20, height),
                 fontSize: Math.max(8, Math.min(72, height * 0.9)), fill: "transparent", stroke: "transparent", color: "#273d4c", borderWidth: 0 });
             }
