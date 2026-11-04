@@ -361,12 +361,17 @@
           gap: 6px;
         }
       }
+          .style-preview>span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+      [data-chart-style]::before {content:"";display:block;margin:4px auto;width:32px;height:32px;border-radius:50%;background:conic-gradient(#526a91 0 40%,#40a88d 40% 73%,#dce5ed 73%);}
+      [data-chart-style="donut"]::before {mask:radial-gradient(circle,transparent 40%,black 43%)}
+      [data-chart-style="half"]::before {mask:radial-gradient(circle,transparent 40%,black 43%);clip-path:inset(0 0 50%)}
+      [data-chart-style="double"]::before {mask:radial-gradient(circle,transparent 20%,black 22% 40%,transparent 42% 48%,black 50%)}
     </style>
   </head>
   <body>
     <header>
-      <h1>统一设计工作台 <small>· v0.8.0</small></h1>
-      <a href="studio.html">原设计原型</a><a href="canvas.html">原自由画布</a><button id="save">保存草稿</button
+      <h1>统一设计工作台 <small>· v0.9.0</small></h1>
+      <a href="studio.html">原设计原型</a><a href="canvas.html">原自由画布</a><button id="undo" disabled>撤销</button><button id="redo" disabled>重做</button><small id="saveState" role="status">本地草稿</small><button id="save">保存草稿</button
       ><button id="reset">新建空白</button>
     </header>
     <div class="layout">
@@ -444,35 +449,6 @@
         <p id="selection" class="picked">请选择画板或元素</p>
         <section id="panelDesign" role="tabpanel" aria-labelledby="tabDesign">
         <div id="fields" class="fields" hidden>
-          <details open>
-            <summary>内容与尺寸</summary>
-            <div class="field-grid">
-              <label>名称<input id="itemName" /></label><label id="labelRow">文字<input id="label" /></label
-              ><label>左边位置<input type="number" id="x" /></label><label>上边位置<input type="number" id="y" /></label
-              ><label>宽度<input type="number" min="20" max="1600" id="width" /></label
-              ><label>高度<input type="number" min="20" max="2400" id="height" /></label
-              ><label id="countRow" hidden
-                >按钮数量<select id="count">
-                  <option>2</option>
-                  <option>3</option>
-                  <option>4</option>
-                </select></label
-              >
-            </div>
-          </details>
-          <details id="constraints" hidden>
-            <summary>容器尺寸变化时</summary><div class="field-grid">
-              <label>横向<select id="constraintX"><option value="start">保持左边距</option><option value="end">保持右边距</option><option value="center">保持居中偏移</option><option value="stretch">左右拉伸</option></select></label>
-              <label>纵向<select id="constraintY"><option value="start">保持上边距</option><option value="end">保持下边距</option><option value="center">保持居中偏移</option><option value="stretch">上下拉伸</option></select></label>
-            </div><p class="hint">容器采用自由摆放时生效；自动排列时由排列规则控制。</p>
-          </details>
-          <details id="boardLayout" hidden open>
-            <summary>容器排列</summary><div class="field-grid">
-              <label>排列方式<select id="layoutMode"><option value="free">自由摆放</option><option value="horizontal">横向排列</option><option value="vertical">纵向排列</option></select></label>
-              <label>元素间距（px）<input id="layoutGap" type="number" min="0" max="200" /></label>
-              <label>内边距（px）<input id="layoutPadding" type="number" min="0" max="200" /></label>
-            </div><p class="hint">自动排列直接放在容器中的元素；宽高仍可单独调整。</p>
-          </details>
           <details id="stylePresets" hidden open>
             <summary>基础样式</summary>
             <p class="hint">点击样式作为起点，下方参数仍可调整。</p>
@@ -517,6 +493,35 @@
               ><button class="style-option" type="button" data-chart-style="double">◎ 双层圆环</button>
             </div>
           </details>
+          <details open>
+            <summary>内容与尺寸</summary>
+            <div class="field-grid">
+              <label>名称<input id="itemName" /></label><label id="labelRow">文字<input id="label" /></label
+              ><label>左边位置<input type="number" id="x" /></label><label>上边位置<input type="number" id="y" /></label
+              ><label>宽度<input type="number" min="20" max="1600" id="width" /></label
+              ><label>高度<input type="number" min="20" max="2400" id="height" /></label
+              ><label id="countRow" hidden
+                >按钮数量<select id="count">
+                  <option>2</option>
+                  <option>3</option>
+                  <option>4</option>
+                </select></label
+              >
+            </div>
+          </details>
+          <details id="constraints" hidden>
+            <summary>容器尺寸变化时</summary><div class="field-grid">
+              <label>横向<select id="constraintX"><option value="start">保持左边距</option><option value="end">保持右边距</option><option value="center">保持居中偏移</option><option value="stretch">左右拉伸</option></select></label>
+              <label>纵向<select id="constraintY"><option value="start">保持上边距</option><option value="end">保持下边距</option><option value="center">保持居中偏移</option><option value="stretch">上下拉伸</option></select></label>
+            </div><p class="hint">容器采用自由摆放时生效；自动排列时由排列规则控制。</p>
+          </details>
+          <details id="boardLayout" hidden open>
+            <summary>容器排列</summary><div class="field-grid">
+              <label>排列方式<select id="layoutMode"><option value="free">自由摆放</option><option value="horizontal">横向排列</option><option value="vertical">纵向排列</option></select></label>
+              <label>元素间距（px）<input id="layoutGap" type="number" min="0" max="200" /></label>
+              <label>内边距（px）<input id="layoutPadding" type="number" min="0" max="200" /></label>
+            </div><p class="hint">自动排列直接放在容器中的元素；宽高仍可单独调整。</p>
+          </details>
           <details open id="appearance">
             <summary>外观与文字</summary>
             <div class="field-grid">
@@ -549,7 +554,7 @@
         <section id="panelCopy" role="tabpanel" aria-labelledby="tabCopy" hidden>
         <h2>所选设计参数</h2>
         <textarea id="summary" class="summary" readonly aria-label="所选设计参数"></textarea
-        ><button id="copy" class="copy">复制所选参数给 AI</button>
+        ><button id="copy" class="copy">复制完整设计</button><h2>这次改动</h2><p class="hint">与本次打开后首次选中该对象时比较。可手动设定新的比较起点。</p><textarea id="changes" class="summary" readonly></textarea><button id="copyChanges">只复制改动</button> <button id="baseline">设为比较起点</button>
         <details class="note">
           <summary>粘贴参数生成模板</summary>
           <p class="hint">粘贴本工具复制的参数，或让 AI 按下方格式输出 JSON。只读取数据，不执行代码。</p>
@@ -1325,7 +1330,36 @@
             字号: a.fontSize, 边框粗细: a.borderWidth ?? 1, 点击效果: a.interaction || "toggle", 横向约束: a.constraintX || "start", 纵向约束: a.constraintY || "start",
           };
         }
+        const comparison = new Map();
+        function changeText(reset = false) {
+          const selected = new Set(selection);
+          selection.filter(n => n.hasName("board")).forEach(b => b.find(".item").forEach(n => selected.add(n)));
+          const descriptions = [];
+          for (const node of selected) {
+            const data = summaryData(node);
+            delete data.内容;
+            const flat = {};
+            for (const [key, value] of Object.entries(data)) {
+              if (value && typeof value === "object") {
+                for (const [part, v] of Object.entries(value)) flat[key + "·" + part] = v;
+              } else if (value !== undefined) flat[key] = value;
+            }
+            if (reset || !comparison.has(node.id())) comparison.set(node.id(), flat);
+            const start = comparison.get(node.id());
+            const differences = Object.keys(flat).filter(k => flat[k] !== start[k])
+              .map(k => k + "：" + start[k] + " → " + flat[k]);
+            if (differences.length) descriptions.push([data.所属画板, data.名称].filter(Boolean).join(" → ") + " [" + node.id() + "]\n" + differences.join("\n"));
+          }
+          $("changes").value = descriptions.join("\n\n") || (selection.length ? "所选对象暂无参数改动" : "请先选择对象");
+          $("copyChanges").disabled = !descriptions.length;
+        }
+        $("baseline").onclick = () => changeText(true);
+        $("copyChanges").onclick = async () => {
+          try { await navigator.clipboard.writeText($("changes").value); $("status").textContent = "已复制所选对象的改动"; }
+          catch { $("changes").focus(); $("changes").select(); $("status").textContent = "请手动复制已选中的改动"; }
+        };
         function updateSummary() {
+          changeText();
           let unique = selection.filter(
             (n) => !selection.some((p) => p !== n && p.hasName("board") && parentBoard(n) === p),
           );
@@ -1352,6 +1386,13 @@
             $("constraints").hidden = isBoard || !parentBoard(n);
             $("interactionRow").hidden = isBoard || !["button", "group", "icon"].includes(a.type);
             $("interaction").value = a.interaction || "toggle";
+            if (a.type === "group") {
+              const labels = (a.label || "").split(/[,，]/);
+              document.querySelectorAll("[data-style] .style-preview").forEach(sample => {
+                sample.children[0].textContent = labels[0] || "主线";
+                sample.children[1].textContent = labels[1] || "并行";
+              });
+            }
             $("stylePresets").hidden = isBoard || a.type !== "group";
             $("buttonPresets").hidden = isBoard || a.type !== "button";
             $("chartPresets").hidden = isBoard || a.type !== "chart";
@@ -1862,7 +1903,8 @@
         document.addEventListener("keydown", e => {
           if (preview || editableTarget(document.activeElement) || e.isComposing) return;
           const mod=e.metaKey||e.ctrlKey, k=e.key.toLowerCase();
-          if (mod && k === "a") { e.preventDefault(); $("selectAll").click(); }
+          if (mod && (k === "z" || k === "y")) { e.preventDefault(); (k === "y" || e.shiftKey ? $("redo") : $("undo")).click(); }
+          else if (mod && k === "a") { e.preventDefault(); $("selectAll").click(); }
           else if (mod && k === "d" && selection.length) { e.preventDefault(); $("quickDuplicate").click(); }
           else if (!mod && !e.altKey && (e.key === "Delete" || e.key === "Backspace") && selection.length) { e.preventDefault(); $("remove").click(); }
           else if (e.key === "Escape" && selection.length) { e.preventDefault(); setSelection([]); }
@@ -2025,7 +2067,7 @@
             const item = addItem(b, { type: "image", itemName: "截图参考", imageData: data,
               x: (b.width() - w) / 2, y: (b.height() - h) / 2, width: w, height: h,
               fill: "#ffffff", stroke: "#ffffff", color: "#273d4c", radius: 0, fontSize: 16 });
-            agentImage = item; agentBoard = b; activeBoard = b; setSelection([item]); refresh();
+            agentImage = item; agentBoard = b; activeBoard = b; setSelection([item]); refresh(); checkpoint();
             agentMessage("截图已放入手机容器。选中截图后可再次识别；请点击第 2 步。");
           } catch (e) { agentMessage(e.message || "导入失败。"); }
         };
@@ -2108,7 +2150,7 @@
                 width: Math.max(20, (box.x1 - box.x0) * fx + 8), height: Math.max(20, height),
                 fontSize: Math.max(8, Math.min(72, height * 0.9)), fill: "transparent", stroke: "transparent", color: "#273d4c", borderWidth: 0 });
             }
-            activeBoard = draft; setSelection([draft]); refresh();
+            activeBoard = draft; setSelection([draft]); refresh(); checkpoint();
             agentMessage(elements ? "已生成 " + elements.length + " 个可编辑元素。模型结果是估计值，请对照截图检查文字、颜色和位置；交互不会自动还原。" : "已在截图右边生成 " + Math.min(lines.length, 300) + " 个可编辑文字。颜色、图标、外框和交互尚未自动还原，请对照原图调整。");
           } catch (e) { agentMessage("识别失败：" + (e.message || "请检查网络后重试")); }
           finally { if (worker) await worker.terminate(); agentBusy = false; $("agentAnalyze").disabled = false; }
@@ -2124,45 +2166,58 @@
             children: Array.from(b.find(".item")).map((g) => ({ ...g.getAttrs() })),
           }));
         }
-        $("save").onclick = () => {
-          try {
-            localStorage.setItem(
-              key,
-              JSON.stringify({
-                boards: serialize(),
-                freeItems: Array.from(free.find(".item")).map((g) => ({ ...g.getAttrs() })),
-              }),
-            );
-            $("status").textContent = "草稿已保存到本浏览器。";
-          } catch (e) {
-            $("status").textContent = "保存失败，请检查浏览器存储。";
-          }
-        };
-        $("reset").onclick = () => {
-          if (confirm("新建空白将清除当前画布内容；已保存的草稿不会立即删除。继续吗？")) {
-            boards().forEach((b) => {
-              boardBackgrounds.get(b)?.destroy();
-              boardBackgrounds.delete(b);
-              b.destroy();
-            });
-            backgroundLayer.draw();
-            free.destroyChildren();
-            activeBoard = null;
-            setSelection([]);
-            layer.draw();
-          }
-        };
-        try {
-          let saved = JSON.parse(localStorage.getItem(key));
-          if (saved && Array.isArray(saved.boards))
-            saved.boards.forEach((data) => {
-              let b = addBoard(data);
-              (data.children || []).forEach((d) => addItem(b, d));
-            });
-          if (saved && Array.isArray(saved.freeItems)) saved.freeItems.forEach((d) => addItem(null, d));
-        } catch (e) {
-          $("status").textContent = "草稿读取失败，请检查浏览器存储。";
+        function snapshot() {
+          return JSON.stringify({boards: serialize(), freeItems: free.find(".item").map(n => n.getAttrs())});
         }
+        function restore(data, ids = []) {
+          transformer.nodes([]);
+          boards().forEach(b => { boardBackgrounds.get(b)?.destroy(); b.destroy(); });
+          boardBackgrounds.clear();
+          free.destroyChildren();
+          selection = []; activeBoard = null; agentImage = null;
+          for (const board of data.boards || []) {
+            const host = addBoard(board);
+            for (const child of board.children || []) addItem(host, child);
+          }
+          for (const item of data.freeItems || []) addItem(null, item);
+          setSelection([...boards(), ...items()].filter(n => ids.includes(n.id())));
+          stage.draw();
+        }
+        try {
+          const saved = JSON.parse(localStorage.getItem(key));
+          if (saved) restore(saved);
+        } catch { $("status").textContent = "读取原草稿失败"; }
+        let current = snapshot(), past = [], future = [];
+        function saveDraft() {
+          try { localStorage.setItem(key, current); $("saveState").textContent = "已保存到本机"; }
+          catch { $("saveState").textContent = "保存失败 · 浏览器空间不足或不可用"; }
+        }
+        function updateHistoryButtons() {
+          $("undo").disabled = !past.length;
+          $("redo").disabled = !future.length;
+        }
+        function checkpoint() {
+          const next = snapshot();
+          if (next === current) return;
+          past.push(current);
+          if (past.length > 40) past.shift();
+          future = []; current = next; updateHistoryButtons(); saveDraft();
+        }
+        function travel(from, to) {
+          if (!from.length) return;
+          to.push(current); current = from.pop();
+          restore(JSON.parse(current), selection.map(n => n.id()));
+          updateHistoryButtons(); saveDraft();
+        }
+        $("undo").onclick = () => { checkpoint(); travel(past, future); };
+        $("redo").onclick = () => travel(future, past);
+        $("save").onclick = () => { checkpoint(); saveDraft(); };
+        $("reset").onclick = () => {
+          if (confirm("清空画布并自动保存？本次打开期间可撤销。")) { restore({}); checkpoint(); }
+        };
+        for (const event of ["click","change","mouseup","touchend","paste","keyup"])
+          document.addEventListener(event, checkpoint);
+        window.addEventListener("pagehide", checkpoint);
         updateLayers();
         refresh();
         coverBackground();
