@@ -365,7 +365,7 @@
   </head>
   <body>
     <header>
-      <h1>统一设计工作台 <small>· v0.7.0</small></h1>
+      <h1>统一设计工作台 <small>· v0.7.1</small></h1>
       <a href="studio.html">原设计原型</a><a href="canvas.html">原自由画布</a><button id="save">保存草稿</button
       ><button id="reset">新建空白</button>
     </header>
@@ -417,7 +417,7 @@
           </div>
         </div>
         <p class="hint">
-          点选或框选对象后，在选中对象（或容器内部空白处）按住左键拖动即可移动；框选/多选后拖任意选中对象可整体一起移动，容器与内部元素作为一组联动。拖动对象时自动显示对齐参考线：边缘对齐（左右/上下）、中心点对齐（横向/纵向）、以及三个对象间距相等时的等间距分布线。在大画布空白处按住左键拖动框选，碰到即选中。选择手形工具拖动画布视野；预览模式可点击按钮、按钮组和图标查看示例反馈。
+          快捷键：⌘/Ctrl+A 全选，⌘/Ctrl+C 复制，⌘/Ctrl+V 粘贴，⌘/Ctrl+D 创建副本，Delete 删除，Esc 取消选择。复制对象可在当前工作台粘贴。点选或框选对象后，在选中对象（或容器内部空白处）按住左键拖动即可移动；框选/多选后拖任意选中对象可整体一起移动，容器与内部元素作为一组联动。拖动对象时自动显示对齐参考线：边缘对齐（左右/上下）、中心点对齐（横向/纵向）、以及三个对象间距相等时的等间距分布线。在大画布空白处按住左键拖动框选，碰到即选中。选择手形工具拖动画布视野；预览模式可点击按钮、按钮组和图标查看示例反馈。
         </p>
       </main>
       <aside class="side right">
@@ -614,6 +614,8 @@
           listening: false,
         });
         overlay.add(marquee);
+        const selectionFrame = new Konva.Rect({ name: "selection-frame", stroke: "#2788d3", strokeWidth: 1.5, visible: false, listening: false });
+        overlay.add(selectionFrame);
         const types = {
           board: "手机画板",
           frame: "功能区外框",
@@ -737,8 +739,8 @@
           back.size({ width: b.width(), height: b.height() });
           back.fill(b.getAttr("fill") || "#ffffff");
           back.cornerRadius(b.getAttr("radius") || 0);
-          back.stroke(selection.includes(b) ? "#428aab" : (b.getAttr("stroke") || "#dce3ec"));
-          back.strokeWidth(selection.includes(b) ? 2 : Number(b.getAttr("borderWidth") ?? 1));
+          back.stroke(selection.length === 1 && selection.includes(b) ? "#428aab" : (b.getAttr("stroke") || "#dce3ec"));
+          back.strokeWidth(selection.length === 1 && selection.includes(b) ? 2 : Number(b.getAttr("borderWidth") ?? 1));
           b.findOne(".board-body").size({ width: b.width(), height: b.height() });
           backgroundLayer.batchDraw();
           title.text(b.getAttr("itemName") + "  ·  " + Math.round(b.width()) + " × " + Math.round(b.height()));
@@ -1079,16 +1081,27 @@
             $("status").textContent = target ? "元素已放入 " + target.getAttr("itemName") : "元素已移到大画布";
           }
         }
+        function selectionBounds() {
+          if (!selection.length) return null;
+          const nodes = selection.filter(n => !selection.some(p => p !== n && p.hasName("board") && parentBoard(n) === p));
+          const rects = nodes.map(n => n.hasName("board") ? {x:n.x(),y:n.y(),width:n.width(),height:n.height()} : n.getClientRect({relativeTo:layer}));
+          const left=Math.min(...rects.map(r=>r.x)), top=Math.min(...rects.map(r=>r.y)), right=Math.max(...rects.map(r=>r.x+r.width)), bottom=Math.max(...rects.map(r=>r.y+r.height));
+          return {x:left,y:top,width:right-left,height:bottom-top};
+        }
+        function updateSelectionFrame() {
+          const r = selectionBounds();
+          if (!r || selection.length < 2 || preview) { selectionFrame.visible(false); overlay.batchDraw(); return; }
+          selectionFrame.setAttrs({...r, strokeWidth:1.5/zoom, visible:true});
+          selectionFrame.moveToTop(); overlay.batchDraw();
+        }
         function positionQuick() {
+          updateSelectionFrame();
           const quick = $("quick");
           if (preview || !selection.length) {
             quick.hidden = true;
             return;
           }
-          const node = selection[0],
-            rect = node.hasName("board")
-              ? { x: node.x(), y: node.y(), width: node.width(), height: node.height() }
-              : node.getClientRect({ relativeTo: layer });
+          const rect = selectionBounds();
           quick.hidden = false;
           const w = quick.offsetWidth;
           const rightX = (rect.x + rect.width) * zoom + stage.x() + 8;
@@ -1246,12 +1259,12 @@
           if (a.length && parentBoard(a[0])) activeBoard = parentBoard(a[0]);
           boards().forEach((b) =>
             boardBackgrounds.get(b).setAttrs({
-              stroke: a.includes(b) ? "#428aab" : (b.getAttr("stroke") || "#dce3ec"),
-              strokeWidth: a.includes(b) ? 2 : Number(b.getAttr("borderWidth") ?? 1),
+              stroke: a.length === 1 && a.includes(b) ? "#428aab" : (b.getAttr("stroke") || "#dce3ec"),
+              strokeWidth: a.length === 1 && a.includes(b) ? 2 : Number(b.getAttr("borderWidth") ?? 1),
             }),
           );
           backgroundLayer.batchDraw();
-          transformer.nodes(preview ? [] : a.filter((n) => !n.hasName("board")));
+          transformer.nodes(preview || a.length !== 1 ? [] : a.filter((n) => !n.hasName("board")));
           updateLayers();
           refresh();
           layer.batchDraw();
@@ -1726,7 +1739,7 @@
           $("previewMode").setAttribute("aria-pressed", String(on));
           $("quick").hidden = on || !selection.length;
           transformer.nodes([]);
-          if (!on) transformer.nodes(selection.filter((n) => !n.hasName("board")));
+          if (!on && selection.length === 1) transformer.nodes(selection.filter((n) => !n.hasName("board")));
           $("status").textContent = on ? "交互预览：点击按钮组、按钮或图标查看示例反馈。" : "设计模式：可移动和编辑。";
           layer.draw();
           positionQuick();
@@ -1788,6 +1801,50 @@
           setSelection(copies);
           $("status").textContent = "已复制对象";
         };
+        // 画布快捷键不接管文本框，避免影响正常文字编辑。
+        let canvasClipboard = null, canvasClipboardToken = "", pasteCount = 0;
+        function editableTarget(el) { return !!el && (el.isContentEditable || !!el.closest("input, textarea, select, [contenteditable=true]")); }
+        function captureSelection() {
+          return selection.filter(n => !selection.some(p => p !== n && p.hasName("board") && parentBoard(n) === p)).map(n => {
+            if (n.hasName("board")) return {kind:"board",attrs:{...n.getAttrs()},children:Array.from(n.find(".item")).map(c=>({...c.getAttrs()}))};
+            return {kind:"item",attrs:{...n.getAttrs()},parentId:parentBoard(n)?.id() || null};
+          });
+        }
+        function pasteCanvas() {
+          if (!canvasClipboard?.length) return;
+          pasteCount++;
+          const offset=20*pasteCount, copies=[];
+          canvasClipboard.forEach(entry => {
+            if (entry.kind === "board") {
+              const a=entry.attrs, b=addBoard({...a,id:null,itemName:a.itemName+" 副本",x:a.x+offset,y:a.y+offset});
+              entry.children.forEach(child=>addItem(b,{...child,id:null})); copies.push(b);
+            } else {
+              const a=entry.attrs, parent=entry.parentId ? boards().find(b=>b.id()===entry.parentId) : null;
+              copies.push(addItem(parent,{...a,id:null,itemName:a.itemName+" 副本",x:a.x+offset,y:a.y+offset}));
+            }
+          });
+          setSelection(copies); layer.batchDraw(); $("status").textContent="已粘贴 "+copies.length+" 个对象。";
+        }
+        document.addEventListener("copy", e => {
+          if (preview || editableTarget(document.activeElement) || !selection.length || !e.clipboardData) return;
+          canvasClipboard=captureSelection(); pasteCount=0;
+          canvasClipboardToken="TIMEBOOK-CANVAS-"+Date.now()+"-"+Math.random().toString(36).slice(2);
+          e.clipboardData.setData("text/plain",canvasClipboardToken); e.preventDefault();
+          $("status").textContent="已复制所选对象，可按 ⌘V / Ctrl+V 粘贴到当前工作台。";
+        });
+        document.addEventListener("paste", e => {
+          if (preview || editableTarget(document.activeElement) || !e.clipboardData) return;
+          if (!canvasClipboard || e.clipboardData.getData("text/plain") !== canvasClipboardToken) return;
+          e.preventDefault(); pasteCanvas();
+        });
+        document.addEventListener("keydown", e => {
+          if (preview || editableTarget(document.activeElement) || e.isComposing) return;
+          const mod=e.metaKey||e.ctrlKey, k=e.key.toLowerCase();
+          if (mod && k === "a") { e.preventDefault(); $("selectAll").click(); }
+          else if (mod && k === "d" && selection.length) { e.preventDefault(); $("quickDuplicate").click(); }
+          else if (!mod && !e.altKey && (e.key === "Delete" || e.key === "Backspace") && selection.length) { e.preventDefault(); $("remove").click(); }
+          else if (e.key === "Escape" && selection.length) { e.preventDefault(); setSelection([]); }
+        });
         $("copyFormat").onclick = async () => {
           const prompt =
             '请仅输出 JSON 数组，不要输出代码。每项支持：类型（按钮、按钮组、功能区外框、文字、圆环图、图标、手机画板）、名称、文字、尺寸（宽、高）、位置（左、上）、背景、文字颜色、边框颜色、选中颜色、圆角、字号。颜色使用 #RRGGBB。容器可用排列方式 free、horizontal、vertical、元素间距、内边距、边框粗细；子元素可用横向约束和纵向约束 start、end、center、stretch；点击效果可用 toggle 或 none。按钮组可用按钮数量 2–4、基础样式 A–F；按钮样式用 solid、outline、soft、square；图表样式用 pie、donut、half、double。手机画板可用内容数组包含元素。示例：[{\"类型\":\"按钮\",\"文字\":\"开始\",\"尺寸\":{\"宽\":100,\"高\":44}}]';
