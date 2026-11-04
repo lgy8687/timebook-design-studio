@@ -365,12 +365,26 @@
   </head>
   <body>
     <header>
-      <h1>统一设计工作台 <small>· v0.7.1</small></h1>
+      <h1>统一设计工作台 <small>· v0.8.0</small></h1>
       <a href="studio.html">原设计原型</a><a href="canvas.html">原自由画布</a><button id="save">保存草稿</button
       ><button id="reset">新建空白</button>
     </header>
     <div class="layout">
       <aside class="side left">
+        <h2>截图分析 Agent</h2>
+        <p class="hint">先导入截图，再识别文字，生成并排的可编辑草稿。</p>
+        <input id="agentFile" type="file" accept="image/png,image/jpeg,image/webp" aria-label="选择截图" />
+        <button id="agentImport" type="button" style="width:100%;margin-top:8px">1. 放入手机容器</button>
+        <details class="note">
+          <summary>视觉模型设置（可选）</summary>
+          <p class="hint">启用后会把截图发送到你填写的服务，可能产生费用。密钥只保留在当前页面，不保存到草稿。</p>
+          <label>接口地址<input id="agentEndpoint" type="url" value="https://api.openai.com/v1/chat/completions" style="width:100%" /></label>
+          <label>模型名称<input id="agentModel" placeholder="填写支持图片的模型名称" style="width:100%" /></label>
+          <label>API 密钥<input id="agentKey" type="password" autocomplete="off" style="width:100%" /></label>
+          <label><input id="agentUseModel" type="checkbox" /> 识别时发送截图到此服务</label>
+        </details>
+        <button id="agentAnalyze" type="button" style="width:100%;margin-top:8px">2. 分析截图生成草稿</button>
+        <p id="agentStatus" class="hint" role="status">识别在浏览器中进行；首次使用需要联网下载识别工具和语言包。</p>
         <h2>添加模块</h2>
         <div class="modules">
           <button id="containerToggle" type="button" aria-expanded="false">容器 ▾</button
@@ -624,6 +638,7 @@
           text: "文字",
           chart: "圆环图",
           icon: "图标",
+          image: "截图参考",
         };
         const defaults = {
           frame: {
@@ -903,6 +918,12 @@
                   fill: d.color,
                 }),
               );
+          } else if (d.type === "image") {
+            const image = new Image();
+            const picture = new Konva.Image({ width: w, height: h, listening: false });
+            g.add(picture);
+            image.onload = () => { picture.image(image); if (g.getStage()) g.getLayer().batchDraw(); };
+            image.src = d.imageData || "";
           } else if (d.type === "icon") {
             g.add(new Konva.Rect({ width: w, height: h, fill: "rgba(0,0,0,0.001)" }));
             const raw = window.TIMEBOOK_ICONS[d.iconName] || window.TIMEBOOK_ICONS.clock;
@@ -967,12 +988,12 @@
             } else
               g.add(
                 new Konva.Text({
-                  x: 5,
+                  x: d.ocrText ? 0 : 5,
                   y: Math.max(0, (h - d.fontSize) / 2),
-                  width: w - 10,
+                  width: d.ocrText ? w : w - 10,
                   text: d.label || "",
                   fontSize: d.fontSize,
-                  align: d.type === "frame" ? "left" : "center",
+                  align: d.type === "frame" || d.ocrText ? "left" : "center",
                   fill: d.color,
                 }),
               );
@@ -984,6 +1005,7 @@
             name: "item",
             id: d.id || "item-" + Date.now() + "-" + ++counter,
             type: d.type,
+            imageData: d.imageData || "", ocrText: !!d.ocrText,
             itemName: d.itemName || types[d.type],
             x: d.x ?? 30,
             y: d.y ?? 40,
@@ -1971,6 +1993,125 @@
             $("summary").select();
             $("status").textContent = "请手动复制已选中的文字。";
           }
+        };
+        // Screenshot agent: reference image + browser OCR + editable text draft.
+        let agentImage = null, agentBoard = null, agentBusy = false;
+        const agentMessage = (message) => { $("agentStatus").textContent = message; };
+        function loadImage(source) {
+          return new Promise((resolve, reject) => {
+            const image = new Image(); image.onload = () => resolve(image);
+            image.onerror = () => reject(new Error("无法读取这张图片，请换一张截图。")); image.src = source;
+          });
+        }
+        $("agentImport").onclick = async () => {
+          const file = $("agentFile").files[0];
+          if (!file) return agentMessage("请先选择一张截图。");
+          if (!/^image\/(png|jpeg|webp)$/.test(file.type) || file.size > 8 * 1024 * 1024)
+            return agentMessage("请选择 8MB 以内的 PNG、JPG 或 WebP 图片。");
+          try {
+            const source = await new Promise((resolve, reject) => {
+              const reader = new FileReader(); reader.onload = () => resolve(reader.result);
+              reader.onerror = () => reject(new Error("图片读取失败。")); reader.readAsDataURL(file);
+            });
+            const image = await loadImage(source);
+            // Limit saved image size while preserving its aspect ratio.
+            const scale = Math.min(1, 1600 / Math.max(image.width, image.height));
+            const c = document.createElement("canvas"); c.width = Math.round(image.width * scale); c.height = Math.round(image.height * scale);
+            c.getContext("2d").drawImage(image, 0, 0, c.width, c.height);
+            const data = c.toDataURL("image/jpeg", 0.88);
+            const b = addBoard({ width: 384, height: 832, itemName: "截图参考" });
+            const factor = Math.min(b.width() / c.width, b.height() / c.height);
+            const w = c.width * factor, h = c.height * factor;
+            const item = addItem(b, { type: "image", itemName: "截图参考", imageData: data,
+              x: (b.width() - w) / 2, y: (b.height() - h) / 2, width: w, height: h,
+              fill: "#ffffff", stroke: "#ffffff", color: "#273d4c", radius: 0, fontSize: 16 });
+            agentImage = item; agentBoard = b; activeBoard = b; setSelection([item]); refresh();
+            agentMessage("截图已放入手机容器。选中截图后可再次识别；请点击第 2 步。");
+          } catch (e) { agentMessage(e.message || "导入失败。"); }
+        };
+        function loadOcr() {
+          if (window.Tesseract) return Promise.resolve();
+          return new Promise((resolve, reject) => {
+            const script = document.createElement("script"); script.src = "https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/tesseract.min.js";
+            script.onload = resolve; script.onerror = () => reject(new Error("识别工具下载失败，请检查网络后重试。"));
+            document.head.appendChild(script);
+          });
+        }
+        async function analyzeWithModel(imageData, imageWidth, imageHeight, lines) {
+          const endpoint = $("agentEndpoint").value.trim(), model = $("agentModel").value.trim(), key = $("agentKey").value.trim();
+          let url; try { url = new URL(endpoint); } catch (_) { throw new Error("请填写有效的模型接口地址。"); }
+          if (url.protocol !== "https:" && !(url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)))
+            throw new Error("模型接口需要 HTTPS，或本机 localhost 地址。");
+          if (!model || !key) throw new Error("请填写视觉模型名称和 API 密钥。");
+          const instruction = `你是 UI 截图分析器。只输出一个 JSON 对象，格式：{"elements":[{"type":"frame|button|text","label":"文字","x":0,"y":0,"width":100,"height":40,"fill":"#ffffff","stroke":"#dce3ec","color":"#273d4c","radius":8,"fontSize":16}]}。坐标和尺寸以原图左上角为原点、原图像素为单位，原图 ${imageWidth}×${imageHeight}。先画背景卡片，再画按钮和文字。只描述截图可见内容，不要猜测交互；避免重复文字。无内容则返回空数组。不要输出 Markdown。OCR 参考：${JSON.stringify(lines.slice(0,100).map(l => ({text:l.text.trim(),box:l.bbox})))}`;
+          const response = await fetch(url.href, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key },
+            body: JSON.stringify({ model, messages: [{ role: "user", content: [ { type: "text", text: instruction }, { type: "image_url", image_url: { url: imageData } } ] }], temperature: 0.1 }) });
+          if (!response.ok) throw new Error("模型接口返回 HTTP " + response.status + "，请检查地址、模型、密钥或浏览器跨域设置。");
+          const payload = await response.json();
+          let content = payload.choices?.[0]?.message?.content;
+          if (Array.isArray(content)) content = content.map(part => part.text || "").join("");
+          if (typeof content !== "string") throw new Error("模型没有返回可用的文字结果。");
+          let parsed; try { parsed = JSON.parse(content.replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "")); }
+          catch (_) { throw new Error("模型返回格式不正确，请重试。"); }
+          if (!Array.isArray(parsed.elements)) throw new Error("模型结果缺少元素列表。");
+          return parsed.elements.slice(0, 200).filter(e => e && ["frame", "button", "text"].includes(e.type) &&
+            [e.x,e.y,e.width,e.height].every(n => typeof n === "number" && Number.isFinite(n)) && e.width > 0 && e.height > 0 &&
+            e.x >= 0 && e.y >= 0 && e.x < imageWidth && e.y < imageHeight);
+        }
+        function modelItem(element, item, image) {
+          const fx = item.width() / image.width, fy = item.height() / image.height;
+          const validColor = (value, fallback) => typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
+          const d = defaults[element.type];
+          return { ...d, type: element.type, itemName: "模型识别" + types[element.type],
+            label: typeof element.label === "string" ? element.label.slice(0, 300) : "", ocrText: element.type === "text",
+            x: item.x() + element.x * fx, y: item.y() + element.y * fy,
+            width: Math.max(20, Math.min(element.width, image.width - element.x) * fx),
+            height: Math.max(20, Math.min(element.height, image.height - element.y) * fy),
+            fill: validColor(element.fill, d.fill), stroke: validColor(element.stroke, d.stroke), color: validColor(element.color, d.color),
+            radius: Math.max(0, Math.min(300, Number(element.radius) || 0)) * fx,
+            fontSize: Math.max(8, Math.min(72, (Number(element.fontSize) || 16) * fy)) };
+        }
+        $("agentAnalyze").onclick = async () => {
+          const selected = selection.length === 1 && selection[0].getAttr("type") === "image" ? selection[0] : null;
+          const item = selected || agentImage;
+          if (!item || !item.getStage()) return agentMessage("请先导入截图，或选中已导入的截图。");
+          if (agentBusy) return;
+          const sourceBoard = parentBoard(item);
+          if (!sourceBoard) return agentMessage("请把截图放在手机容器内，再开始分析。");
+          agentBusy = true; $("agentAnalyze").disabled = true;
+          let worker;
+          try {
+            agentMessage("正在加载识别工具，首次使用需要下载中文语言包，请稍候……");
+            await loadOcr();
+            worker = await Tesseract.createWorker("chi_sim+eng", 1, { logger: (m) => {
+              if (m.status === "recognizing text") agentMessage("正在识别文字：" + Math.round((m.progress || 0) * 100) + "%");
+            }});
+            const result = await worker.recognize(item.getAttr("imageData"), {}, { blocks: true });
+            const lines = (result.data.blocks || []).flatMap(b => b.paragraphs || []).flatMap(p => p.lines || [])
+              .filter(line => line.text && line.text.trim() && line.bbox);
+            if (!lines.length && !$("agentUseModel").checked) return agentMessage("没有识别到文字。可以换一张更清晰的截图后重试。");
+            const image = await loadImage(item.getAttr("imageData"));
+            let elements = null;
+            if ($("agentUseModel").checked) {
+              agentMessage("正在将截图发送到你配置的模型服务并分析，请稍候……");
+              elements = await analyzeWithModel(item.getAttr("imageData"), image.width, image.height, lines);
+              if (!elements.length) throw new Error("模型没有识别出可用元素；可取消模型选项，先生成文字草稿。");
+            }
+            const draft = addBoard({ width: sourceBoard.width(), height: sourceBoard.height(),
+              x: sourceBoard.x() + sourceBoard.width() + 80, y: sourceBoard.y(), itemName: elements ? "识别草稿（模型）" : "识别草稿（文字）" });
+            const fx = item.width() / image.width, fy = item.height() / image.height;
+            if (elements) elements.forEach(element => addItem(draft, modelItem(element, item, image)));
+            else for (const line of lines.slice(0, 300)) {
+              const box = line.bbox, height = Math.max(10, (box.y1 - box.y0) * fy);
+              addItem(draft, { ...defaults.text, type: "text", itemName: "识别文字", ocrText: true,
+                label: line.text.trim(), x: item.x() + box.x0 * fx, y: item.y() + box.y0 * fy,
+                width: Math.max(20, (box.x1 - box.x0) * fx + 8), height: Math.max(20, height),
+                fontSize: Math.max(8, Math.min(72, height * 0.9)), fill: "transparent", stroke: "transparent", color: "#273d4c", borderWidth: 0 });
+            }
+            activeBoard = draft; setSelection([draft]); refresh();
+            agentMessage(elements ? "已生成 " + elements.length + " 个可编辑元素。模型结果是估计值，请对照截图检查文字、颜色和位置；交互不会自动还原。" : "已在截图右边生成 " + Math.min(lines.length, 300) + " 个可编辑文字。颜色、图标、外框和交互尚未自动还原，请对照原图调整。");
+          } catch (e) { agentMessage("识别失败：" + (e.message || "请检查网络后重试")); }
+          finally { if (worker) await worker.terminate(); agentBusy = false; $("agentAnalyze").disabled = false; }
         };
         function serialize() {
           return boards().map((b) => ({
