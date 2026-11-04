@@ -86,6 +86,11 @@
       .right {
         border-left: 1px solid #dce6e9;
       }
+      .panel-tabs { display: flex; gap: 5px; margin: 12px 0; }
+      .panel-tabs button { flex: 1; padding: 8px 4px; }
+      .panel-tabs button[aria-selected="true"] { background: #526a91; color: white; border-color: #526a91; }
+      .alignment { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0; }
+      .alignment button { padding: 7px 2px; }
       .modules {
         display: grid;
         grid-template-columns: 1fr;
@@ -334,7 +339,12 @@
         .canvas {
           width: 100%;
         }
-        .modules {
+        .panel-tabs { display: flex; gap: 5px; margin: 12px 0; }
+      .panel-tabs button { flex: 1; padding: 8px 4px; }
+      .panel-tabs button[aria-selected="true"] { background: #526a91; color: white; border-color: #526a91; }
+      .alignment { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0; }
+      .alignment button { padding: 7px 2px; }
+      .modules {
           grid-template-columns: repeat(4, 1fr);
         }
         .viewport {
@@ -355,7 +365,7 @@
   </head>
   <body>
     <header>
-      <h1>统一设计工作台 <small>· v0.6.5</small></h1>
+      <h1>统一设计工作台 <small>· v0.7.0</small></h1>
       <a href="studio.html">原设计原型</a><a href="canvas.html">原自由画布</a><button id="save">保存草稿</button
       ><button id="reset">新建空白</button>
     </header>
@@ -412,7 +422,13 @@
       </main>
       <aside class="side right">
         <h2>选中内容的设置</h2>
+        <div class="panel-tabs" role="tablist" aria-label="属性面板">
+          <button type="button" id="tabDesign" role="tab" aria-selected="true" aria-controls="panelDesign">设计</button>
+          <button type="button" id="tabInteraction" role="tab" aria-selected="false" aria-controls="panelInteraction">交互</button>
+          <button type="button" id="tabCopy" role="tab" aria-selected="false" aria-controls="panelCopy">复制给 AI</button>
+        </div>
         <p id="selection" class="picked">请选择画板或元素</p>
+        <section id="panelDesign" role="tabpanel" aria-labelledby="tabDesign">
         <div id="fields" class="fields" hidden>
           <details open>
             <summary>内容与尺寸</summary>
@@ -429,6 +445,19 @@
                 </select></label
               >
             </div>
+          </details>
+          <details id="constraints" hidden>
+            <summary>容器尺寸变化时</summary><div class="field-grid">
+              <label>横向<select id="constraintX"><option value="start">保持左边距</option><option value="end">保持右边距</option><option value="center">保持居中偏移</option><option value="stretch">左右拉伸</option></select></label>
+              <label>纵向<select id="constraintY"><option value="start">保持上边距</option><option value="end">保持下边距</option><option value="center">保持居中偏移</option><option value="stretch">上下拉伸</option></select></label>
+            </div><p class="hint">容器采用自由摆放时生效；自动排列时由排列规则控制。</p>
+          </details>
+          <details id="boardLayout" hidden open>
+            <summary>容器排列</summary><div class="field-grid">
+              <label>排列方式<select id="layoutMode"><option value="free">自由摆放</option><option value="horizontal">横向排列</option><option value="vertical">纵向排列</option></select></label>
+              <label>元素间距（px）<input id="layoutGap" type="number" min="0" max="200" /></label>
+              <label>内边距（px）<input id="layoutPadding" type="number" min="0" max="200" /></label>
+            </div><p class="hint">自动排列直接放在容器中的元素；宽高仍可单独调整。</p>
           </details>
           <details id="stylePresets" hidden open>
             <summary>基础样式</summary>
@@ -482,6 +511,7 @@
               ><label id="colorRow">文字颜色<input type="color" id="color" /></label
               ><label id="strokeRow">边框／线条颜色<input type="color" id="stroke" /></label
               ><label id="radiusRow">圆角<input type="number" min="0" max="999" id="radius" /></label
+              ><label id="borderWidthRow">边框粗细<input type="number" min="0" max="20" id="borderWidth" /></label
               ><label id="fontRow">字号<input type="number" min="8" max="100" id="fontSize" /></label>
             </div>
             <div id="shapeRow">
@@ -493,11 +523,19 @@
             </div>
           </details>
         </div>
-        <p id="multi" hidden class="hint">多选时可一起移动，也可以复制所选内容。</p>
+        <div id="multi" hidden><p class="hint">对选中的对象调整对齐方式：</p><div class="alignment">
+          <button type="button" data-align="left">左对齐</button><button type="button" data-align="center">水平居中</button><button type="button" data-align="right">右对齐</button>
+          <button type="button" data-align="top">顶部对齐</button><button type="button" data-align="middle">垂直居中</button><button type="button" data-align="bottom">底部对齐</button>
+        </div></div></section>
+        <section id="panelInteraction" role="tabpanel" aria-labelledby="tabInteraction" hidden>
+          <p class="hint">选择按钮、按钮组或图标，设置预览时点击的效果。</p>
+          <label id="interactionRow" hidden>点击效果<select id="interaction"><option value="toggle">切换选中状态</option><option value="none">无动作</option></select></label>
+          <p class="hint">打开上方“交互预览”体验。页面跳转和弹窗尚未提供。</p>
+        </section>
+        <section id="panelCopy" role="tabpanel" aria-labelledby="tabCopy" hidden>
         <h2>所选设计参数</h2>
         <textarea id="summary" class="summary" readonly aria-label="所选设计参数"></textarea
         ><button id="copy" class="copy">复制所选参数给 AI</button>
-        <p class="status" id="status" role="status"></p>
         <details class="note">
           <summary>粘贴参数生成模板</summary>
           <p class="hint">粘贴本工具复制的参数，或让 AI 按下方格式输出 JSON。只读取数据，不执行代码。</p>
@@ -514,6 +552,8 @@
             支持按钮、按钮组、外框、文字、圆环图、图标和手机画板；允许 JSON 数组或本工具复制的完整文本。
           </p>
         </details>
+        </section>
+        <p class="status" id="status" role="status"></p>
         <p class="hint note">容器和大画布都能放元素；功能区外框嵌套、图标与图表素材库、真实 App 界面导入仍待完善。</p>
       </aside>
     </div>
@@ -678,12 +718,28 @@
           stage.draw();
           positionQuick();
         }).observe($("viewport"));
+        function applyLayout(b) {
+          if (!b || !b.hasName("board") || !["horizontal", "vertical"].includes(b.getAttr("layoutMode"))) return;
+          const horizontal = b.getAttr("layoutMode") === "horizontal";
+          const pad = Number(b.getAttr("layoutPadding") ?? 12), gap = Number(b.getAttr("layoutGap") ?? 8);
+          let pos = pad;
+          Array.from(b.getChildren()).filter((n) => n.hasName("item")).forEach((n) => {
+            n.position(horizontal ? { x: pos, y: pad } : { x: pad, y: pos });
+            pos += (horizontal ? n.width() : n.height()) + gap;
+          });
+          layer.batchDraw();
+        }
         function redrawBoard(b) {
           const back = boardBackgrounds.get(b),
             title = b.findOne(".board-title"),
             tab = b.findOne(".board-tab");
           back.position({ x: b.x(), y: b.y() });
           back.size({ width: b.width(), height: b.height() });
+          back.fill(b.getAttr("fill") || "#ffffff");
+          back.cornerRadius(b.getAttr("radius") || 0);
+          back.stroke(selection.includes(b) ? "#428aab" : (b.getAttr("stroke") || "#dce3ec"));
+          back.strokeWidth(selection.includes(b) ? 2 : Number(b.getAttr("borderWidth") ?? 1));
+          b.findOne(".board-body").size({ width: b.width(), height: b.height() });
           backgroundLayer.batchDraw();
           title.text(b.getAttr("itemName") + "  ·  " + Math.round(b.width()) + " × " + Math.round(b.height()));
           title.width(Math.max(180, b.width()));
@@ -698,6 +754,9 @@
             y: d.y ?? 90,
             width: d.width,
             height: d.height,
+            fill: d.fill || "#ffffff", stroke: d.stroke || "#dce3ec", radius: d.radius ?? 0,
+            borderWidth: d.borderWidth ?? 1, layoutMode: d.layoutMode || "free",
+            layoutGap: d.layoutGap ?? 8, layoutPadding: d.layoutPadding ?? 12,
           });
           const back = new Konva.Rect({
             name: "board-bg",
@@ -865,7 +924,7 @@
                 height: h,
                 fill: d.pressed && d.type === "button" ? d.accent || "#40a88d" : background,
                 stroke: border,
-                strokeWidth: 1,
+                strokeWidth: Number(d.borderWidth ?? 1),
                 cornerRadius: Math.min(d.radius, Math.min(w, h) / 2),
               }),
             );
@@ -942,6 +1001,8 @@
             pressed: !!d.pressed,
             buttonStyle: d.buttonStyle || "solid",
             chartStyle: d.chartStyle || "donut",
+            interaction: d.interaction || "toggle", borderWidth: d.borderWidth ?? 1,
+            constraintX: d.constraintX || "start", constraintY: d.constraintY || "start",
           });
           host.add(g);
           drawItem(g);
@@ -963,6 +1024,7 @@
             e.cancelBubble = true;
             if (dragMoved) return;
             if (preview) {
+              if (g.getAttr("interaction") === "none") return;
               if (g.attrs.type === "group") {
                 let p = g.getRelativePointerPosition(),
                   n = g.getAttr("count"),
@@ -989,9 +1051,11 @@
             g.height(Math.max(20, g.height() * g.scaleY()));
             g.scale({ x: 1, y: 1 });
             drawItem(g);
+            applyLayout(parentBoard(g));
             refresh();
           });
           transformer.moveToTop();
+          if (b) applyLayout(b);
           updateLayers();
           return g;
         }
@@ -1181,9 +1245,10 @@
           selection = a;
           if (a.length && parentBoard(a[0])) activeBoard = parentBoard(a[0]);
           boards().forEach((b) =>
-            boardBackgrounds
-              .get(b)
-              .setAttrs({ stroke: a.includes(b) ? "#428aab" : undefined, strokeWidth: a.includes(b) ? 2 : 0 }),
+            boardBackgrounds.get(b).setAttrs({
+              stroke: a.includes(b) ? "#428aab" : (b.getAttr("stroke") || "#dce3ec"),
+              strokeWidth: a.includes(b) ? 2 : Number(b.getAttr("borderWidth") ?? 1),
+            }),
           );
           backgroundLayer.batchDraw();
           transformer.nodes(preview ? [] : a.filter((n) => !n.hasName("board")));
@@ -1201,6 +1266,8 @@
               名称: a.itemName,
               位置: { 左: Math.round(n.x()), 上: Math.round(n.y()) },
               尺寸: { 宽: Math.round(n.width()), 高: Math.round(n.height()) },
+              背景: a.fill || "#ffffff", 边框颜色: a.stroke || "#dce3ec", 边框粗细: a.borderWidth ?? 1, 圆角: a.radius ?? 0,
+              排列方式: a.layoutMode || "free", 元素间距: a.layoutGap ?? 8, 内边距: a.layoutPadding ?? 12,
               内容: Array.from(n.find(".item")).map(summaryData),
             };
           return {
@@ -1220,7 +1287,7 @@
             文字颜色: a.color,
             边框颜色: a.stroke,
             圆角: a.radius,
-            字号: a.fontSize,
+            字号: a.fontSize, 边框粗细: a.borderWidth ?? 1, 点击效果: a.interaction || "toggle", 横向约束: a.constraintX || "start", 纵向约束: a.constraintY || "start",
           };
         }
         function updateSummary() {
@@ -1245,7 +1312,11 @@
           if (one) {
             let a = n.getAttrs(),
               isBoard = n.hasName("board");
-            $("appearance").hidden = isBoard;
+            $("appearance").hidden = false;
+            $("boardLayout").hidden = !isBoard;
+            $("constraints").hidden = isBoard || !parentBoard(n);
+            $("interactionRow").hidden = isBoard || !["button", "group", "icon"].includes(a.type);
+            $("interaction").value = a.interaction || "toggle";
             $("stylePresets").hidden = isBoard || a.type !== "group";
             $("buttonPresets").hidden = isBoard || a.type !== "button";
             $("chartPresets").hidden = isBoard || a.type !== "chart";
@@ -1264,15 +1335,16 @@
               .forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.style === (a.preset || "A"))));
             $("labelRow").hidden = isBoard || a.type === "icon";
             $("countRow").hidden = isBoard || a.type !== "group";
-            $("fillRow").hidden = isBoard || a.type === "icon";
+            $("fillRow").hidden = a.type === "icon";
             $("accentRow").hidden = isBoard || !["group", "button", "chart"].includes(a.type);
             $("accentRow").firstChild.textContent =
               a.type === "button" ? "点击后颜色" : a.type === "chart" ? "图表第二色" : "选中颜色";
             $("colorRow").hidden = isBoard || a.type === "icon";
-            $("strokeRow").hidden = isBoard;
+            $("strokeRow").hidden = false;
             $("strokeRow").firstChild.textContent = a.type === "chart" ? "图表第三色" : "边框／线条颜色";
-            $("radiusRow").hidden = isBoard || ["chart", "icon", "text"].includes(a.type);
-            $("shapeRow").hidden = isBoard || ["chart", "icon", "text"].includes(a.type);
+            $("radiusRow").hidden = !isBoard && ["chart", "icon", "text"].includes(a.type);
+            $("borderWidthRow").hidden = !isBoard && ["chart", "icon", "text"].includes(a.type);
+            $("shapeRow").hidden = !isBoard && ["chart", "icon", "text"].includes(a.type);
             $("fontRow").hidden = isBoard || a.type === "icon";
             for (const [id, val] of Object.entries({
               itemName: a.itemName,
@@ -1287,10 +1359,11 @@
               stroke: a.stroke || "#526a91",
               radius: a.radius || 0,
               fontSize: a.fontSize || 14,
-              count: a.count || 2,
+              count: a.count || 2, constraintX: a.constraintX || "start", constraintY: a.constraintY || "start", borderWidth: a.borderWidth ?? 1, layoutMode: a.layoutMode || "free", layoutGap: a.layoutGap ?? 8, layoutPadding: a.layoutPadding ?? 12,
             }))
               $(id).value = val;
           }
+          if (!one) $("interactionRow").hidden = true;
           updateSummary();
         }
         function hit(n) {
@@ -1386,7 +1459,10 @@
           }
           if (dragStart) {
             const nodes = dragStart.nodes;
+            const oldBoards = nodes.map(({ n }) => parentBoard(n)).filter(Boolean);
             if (dragMoved && nodes.length === 1 && !nodes[0].n.hasName("board")) moveToContainer(nodes[0].n);
+            const newBoards = nodes.map(({ n }) => parentBoard(n)).filter(Boolean);
+            [...new Set([...oldBoards, ...newBoards])].forEach(applyLayout);
             dragStart = null;
             dragMoved = false;
             overlay.find(".guide").forEach((n) => n.destroy());
@@ -1568,21 +1644,30 @@
           "stroke",
           "radius",
           "fontSize",
-          "count",
+          "count", "borderWidth", "layoutMode", "layoutGap", "layoutPadding", "constraintX", "constraintY",
         ])
           $(id).addEventListener("input", () => {
             if (selection.length !== 1) return;
             let n = selection[0],
               v = $(id).value;
-            if (["x", "y", "width", "height", "radius", "fontSize", "count"].includes(id)) {
+            if (["x", "y", "width", "height", "radius", "fontSize", "count", "borderWidth", "layoutGap", "layoutPadding"].includes(id)) {
               if (v === "") return;
               v = Number(v);
               if (!Number.isFinite(v)) return;
               if (["width", "height"].includes(id)) v = Math.max(20, v);
             }
+            const oldSize = n.hasName("board") && ["width", "height"].includes(id) ? n.getAttr(id) : null;
             n.setAttr(id, v);
-            if (n.hasName("board")) redrawBoard(n);
-            else drawItem(n);
+            if (n.hasName("board") && oldSize !== null && n.getAttr("layoutMode") === "free") {
+              const delta = v - oldSize, horizontal = id === "width", prop = horizontal ? "constraintX" : "constraintY";
+              Array.from(n.getChildren()).filter(child => child.hasName("item")).forEach(child => {
+                const rule = child.getAttr(prop) || "start";
+                if (rule === "end" || rule === "center") child[horizontal ? "x" : "y"](child[horizontal ? "x" : "y"]() + delta * (rule === "center" ? 0.5 : 1));
+                if (rule === "stretch") { child[horizontal ? "width" : "height"](Math.max(20, child[horizontal ? "width" : "height"]() + delta)); drawItem(child); }
+              });
+            }
+            if (n.hasName("board")) { redrawBoard(n); applyLayout(n); }
+            else { drawItem(n); const b = parentBoard(n); if (b && ["width", "height"].includes(id)) applyLayout(b); }
             transformer.forceUpdate();
             updateLayers();
             layer.batchDraw();
@@ -1592,14 +1677,28 @@
         document.querySelectorAll("[data-radius]").forEach(
           (b) =>
             (b.onclick = () => {
-              if (selection.length === 1 && !selection[0].hasName("board")) {
+              if (selection.length === 1) {
                 selection[0].setAttr("radius", Number(b.dataset.radius));
-                drawItem(selection[0]);
+                if (selection[0].hasName("board")) redrawBoard(selection[0]); else drawItem(selection[0]);
                 refresh();
                 layer.draw();
               }
             }),
         );
+        $("interaction").addEventListener("change", () => { if (selection.length === 1 && !selection[0].hasName("board")) { selection[0].setAttr("interaction", $("interaction").value); updateSummary(); } });
+        [["tabDesign", "panelDesign"], ["tabInteraction", "panelInteraction"], ["tabCopy", "panelCopy"]].forEach(([tab, panel]) => {
+          $(tab).onclick = () => { [["tabDesign", "panelDesign"], ["tabInteraction", "panelInteraction"], ["tabCopy", "panelCopy"]].forEach(([t,p]) => { $(t).setAttribute("aria-selected", String(t === tab)); $(p).hidden = p !== panel; }); };
+        });
+        document.querySelectorAll("[data-align]").forEach(button => button.onclick = () => {
+          const nodes = selection.filter(n => !selection.some(p => p !== n && p.hasName("board") && parentBoard(n) === p));
+          if (nodes.length < 2) return;
+          if (nodes.some(n => !n.hasName("board") && ["horizontal", "vertical"].includes(parentBoard(n)?.getAttr("layoutMode")))) { $("status").textContent = "自动排列中的元素由容器控制，请先切换为自由摆放。"; return; }
+          const rects = nodes.map(n => n.hasName("board") ? { x:n.x(), y:n.y(), width:n.width(), height:n.height() } : n.getClientRect({relativeTo:layer}));
+          const left = Math.min(...rects.map(r=>r.x)), right = Math.max(...rects.map(r=>r.x+r.width)), top = Math.min(...rects.map(r=>r.y)), bottom = Math.max(...rects.map(r=>r.y+r.height));
+          const align = button.dataset.align;
+          nodes.forEach((n,i) => { const r=rects[i]; let dx=0,dy=0; if(align==="left")dx=left-r.x; if(align==="center")dx=(left+right-r.width)/2-r.x; if(align==="right")dx=right-r.width-r.x; if(align==="top")dy=top-r.y; if(align==="middle")dy=(top+bottom-r.height)/2-r.y; if(align==="bottom")dy=bottom-r.height-r.y; n.position({x:n.x()+dx,y:n.y()+dy}); if(n.hasName("board"))redrawBoard(n); });
+          transformer.forceUpdate(); layer.batchDraw(); positionQuick(); updateSummary(); $("status").textContent="已调整对齐方式。";
+        });
         $("selectAll").onclick = () => setSelection([...boards(), ...items()]);
         $("remove").onclick = () => {
           if (!selection.length) return;
@@ -1674,7 +1773,7 @@
                     x: n.x() + 35,
                     y: n.y() + 35,
                     width: n.width(),
-                    height: n.height(),
+                    height: n.height(), fill: a.fill, stroke: a.stroke, radius: a.radius, borderWidth: a.borderWidth, layoutMode: a.layoutMode, layoutGap: a.layoutGap, layoutPadding: a.layoutPadding,
                   });
                 Array.from(n.find(".item")).forEach((child) => addItem(b, { ...child.getAttrs(), id: null }));
                 copies.push(b);
@@ -1691,7 +1790,7 @@
         };
         $("copyFormat").onclick = async () => {
           const prompt =
-            '请仅输出 JSON 数组，不要输出代码。每项支持：类型（按钮、按钮组、功能区外框、文字、圆环图、图标、手机画板）、名称、文字、尺寸（宽、高）、位置（左、上）、背景、文字颜色、边框颜色、选中颜色、圆角、字号。颜色使用 #RRGGBB。按钮组可用按钮数量 2–4、基础样式 A–F；按钮样式用 solid、outline、soft、square；图表样式用 pie、donut、half、double。手机画板可用内容数组包含元素。示例：[{\"类型\":\"按钮\",\"文字\":\"开始\",\"尺寸\":{\"宽\":100,\"高\":44}}]';
+            '请仅输出 JSON 数组，不要输出代码。每项支持：类型（按钮、按钮组、功能区外框、文字、圆环图、图标、手机画板）、名称、文字、尺寸（宽、高）、位置（左、上）、背景、文字颜色、边框颜色、选中颜色、圆角、字号。颜色使用 #RRGGBB。容器可用排列方式 free、horizontal、vertical、元素间距、内边距、边框粗细；子元素可用横向约束和纵向约束 start、end、center、stretch；点击效果可用 toggle 或 none。按钮组可用按钮数量 2–4、基础样式 A–F；按钮样式用 solid、outline、soft、square；图表样式用 pie、donut、half、double。手机画板可用内容数组包含元素。示例：[{\"类型\":\"按钮\",\"文字\":\"开始\",\"尺寸\":{\"宽\":100,\"高\":44}}]';
           try {
             await navigator.clipboard.writeText(prompt);
             $("importStatus").textContent = "格式说明已复制，可以发给 AI。";
@@ -1761,6 +1860,7 @@
                   height: num(dim.高, base.height, 20, 2400),
                 };
               if (type === "board") {
+                Object.assign(v, { fill: col(o.背景, "#ffffff"), stroke: col(o.边框颜色, "#dce3ec"), radius: num(o.圆角, 0, 0, 999), borderWidth: num(o.边框粗细, 1, 0, 20), layoutMode: ["free", "horizontal", "vertical"].includes(o.排列方式) ? o.排列方式 : "free", layoutGap: num(o.元素间距, 8, 0, 200), layoutPadding: num(o.内边距, 12, 0, 200) });
                 if (o.内容 !== undefined && !Array.isArray(o.内容)) throw Error("画板内容应是数组。");
                 if ((o.内容 || []).length > 30) throw Error("一个画板最多导入 30 项。");
                 v.children = (o.内容 || []).map((x) => parse(x, depth + 1));
@@ -1781,7 +1881,7 @@
                 preset: ["A", "B", "C", "D", "E", "F"].includes(o.基础样式) ? o.基础样式 : "A",
                 buttonStyle: ["solid", "outline", "soft", "square"].includes(o.按钮样式) ? o.按钮样式 : "solid",
                 chartStyle: ["pie", "donut", "half", "double"].includes(o.图表样式) ? o.图表样式 : "donut",
-                iconName: window.TIMEBOOK_ICONS[o.图标] ? o.图标 : "clock",
+                iconName: window.TIMEBOOK_ICONS[o.图标] ? o.图标 : "clock", borderWidth: num(o.边框粗细, 1, 0, 20), interaction: ["toggle", "none"].includes(o.点击效果) ? o.点击效果 : "toggle", constraintX: ["start", "end", "center", "stretch"].includes(o.横向约束) ? o.横向约束 : "start", constraintY: ["start", "end", "center", "stretch"].includes(o.纵向约束) ? o.纵向约束 : "start",
               });
               return v;
             }
@@ -1822,7 +1922,7 @@
             x: b.x(),
             y: b.y(),
             width: b.width(),
-            height: b.height(),
+            height: b.height(), fill: b.getAttr("fill"), stroke: b.getAttr("stroke"), radius: b.getAttr("radius"), borderWidth: b.getAttr("borderWidth"), layoutMode: b.getAttr("layoutMode"), layoutGap: b.getAttr("layoutGap"), layoutPadding: b.getAttr("layoutPadding"),
             children: Array.from(b.find(".item")).map((g) => ({ ...g.getAttrs() })),
           }));
         }
