@@ -366,17 +366,63 @@
       [data-chart-style="donut"]::before {mask:radial-gradient(circle,transparent 40%,black 43%)}
       [data-chart-style="half"]::before {mask:radial-gradient(circle,transparent 40%,black 43%);clip-path:inset(0 0 50%)}
       [data-chart-style="double"]::before {mask:radial-gradient(circle,transparent 20%,black 22% 40%,transparent 42% 48%,black 50%)}
+
+      .left-tabs { position: sticky; top: 0; z-index: 2; background: #fff; padding-bottom: 12px; }
+      #panelAssets > details { margin-top: 16px; }
+      #panelAssets input[type="file"] { max-width: 100%; font-size: 12px; }
+      .layers button { width: 100%; text-align: left; overflow-wrap: anywhere; margin: 3px 0; }
+      .layers button.layer-child { padding-left: 22px; font-size: 12px; }
+      .layers button[aria-pressed="true"] { background: #e5eef8; border-color: #526a91; }
+      .viewport { position: relative; }
+      .empty-state { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; padding: 24px; gap: 12px; pointer-events: none; }
+      .empty-state h2, .empty-state p { margin: 0; }
+      .empty-state button { pointer-events: auto; }
+      .empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+      .primary { background: #526a91; color: #fff; border-color: #526a91; }
+      .canvas-footer { margin-top: 10px; }
+      .canvas-footer summary { font-weight: 400; font-size: 12px; }
+      .canvas-footer > p { margin: 6px 0; }
+      .tools button { min-height: 36px; }
+      #zoomLabel { min-width: 44px; text-align: center; }
+      [hidden] { display: none !important; }
     </style>
   </head>
   <body>
     <header>
-      <h1>统一设计工作台 <small>· v0.9.1</small></h1>
+      <h1>统一设计工作台 <small>· v0.10.0</small></h1>
       <a href="studio.html">原设计原型</a><a href="canvas.html">原自由画布</a><button id="undo" disabled>撤销</button><button id="redo" disabled>重做</button><small id="saveState" role="status">本地草稿</small><button id="save">保存草稿</button
       ><button id="reset">新建空白</button>
     </header>
     <div class="layout">
       <aside class="side left">
-        <h2>截图分析 Agent</h2>
+        <div class="panel-tabs left-tabs" role="tablist" aria-label="工作区面板">
+          <button id="tabAssets" role="tab" aria-selected="true" aria-controls="panelAssets" type="button">素材</button>
+          <button id="tabLayers" role="tab" aria-selected="false" aria-controls="panelLayers" type="button">图层</button>
+        </div>
+        <section id="panelAssets" role="tabpanel" aria-labelledby="tabAssets">
+        <h2>添加模块</h2>
+        <div class="modules">
+          <button id="containerToggle" type="button" aria-expanded="false">容器 ▾</button
+          ><button data-add="frame">外框</button><button data-add="button">按钮</button
+          ><button data-add="group">按钮组</button><button data-add="text">文字</button
+          ><button data-add="chart">圆环图</button
+          ><button id="iconToggle" type="button" aria-expanded="false">图标库 ▾</button>
+        </div>
+        <div id="containerLibrary" class="library" hidden>
+          <h3>容器预设</h3>
+          <button id="addBoard" class="preset">三星 S24 Ultra · 384 × 832</button>
+          <p class="hint">尺寸是可调整的网页参考值。</p>
+        </div>
+        <div id="iconLibrary" class="library" hidden>
+          <h3>图标库</h3>
+          <label class="hint" for="iconSearch">搜索图标</label
+          ><input id="iconSearch" placeholder="例如：日历" style="width: 100%; margin: 5px 0 10px" />
+          <div id="iconGrid" class="icon-grid"></div>
+        </div>
+        <label class="hint"><input type="checkbox" id="addOutside" /> 添加到大画布（容器外）</label>
+        <p class="hint">点击容器选择三星预设；拖动元素进出容器可改变归属。</p>
+        <details id="screenshotPanel" class="note">
+        <summary>截图导入与识别</summary>
         <p class="hint">先导入截图，再识别文字，生成并排的可编辑草稿。</p>
         <input id="agentFile" type="file" accept="image/png,image/jpeg,image/webp" aria-label="选择截图" />
         <button id="agentImport" type="button" style="width:100%;margin-top:8px">1. 放入手机容器</button>
@@ -400,30 +446,13 @@
         </dialog>
         <button id="agentAnalyze" type="button" style="width:100%;margin-top:8px">2. 分析截图生成草稿</button>
         <p id="agentStatus" class="hint" role="status">识别在浏览器中进行；首次使用需要联网下载识别工具和语言包。</p>
-        <h2>添加模块</h2>
-        <div class="modules">
-          <button id="containerToggle" type="button" aria-expanded="false">容器 ▾</button
-          ><button data-add="frame">外框</button><button data-add="button">按钮</button
-          ><button data-add="group">按钮组</button><button data-add="text">文字</button
-          ><button data-add="chart">圆环图</button
-          ><button id="iconToggle" type="button" aria-expanded="false">图标库 ▾</button>
-        </div>
-        <div id="containerLibrary" class="library" hidden>
-          <h3>容器预设</h3>
-          <button id="addBoard" class="preset">三星 S24 Ultra · 384 × 832</button>
-          <p class="hint">尺寸是可调整的网页参考值。</p>
-        </div>
-        <div id="iconLibrary" class="library" hidden>
-          <h3>图标库</h3>
-          <label class="hint" for="iconSearch">搜索图标</label
-          ><input id="iconSearch" placeholder="例如：日历" style="width: 100%; margin: 5px 0 10px" />
-          <div id="iconGrid" class="icon-grid"></div>
-        </div>
-        <label class="hint"><input type="checkbox" id="addOutside" /> 添加到大画布（容器外）</label>
-        <p class="hint">点击容器选择三星预设；拖动元素进出容器可改变归属。</p>
+        </details>
+        </section>
+        <section id="panelLayers" role="tabpanel" aria-labelledby="tabLayers" hidden>
         <h2>画板与元素</h2>
         <div id="layers" class="layers"></div>
         <p class="hint">点选对象；空白处拖动框选，碰到即选中。Shift 点击可增减选择。</p>
+        </section>
       </aside>
       <main class="canvas">
         <div class="tools">
@@ -431,8 +460,8 @@
           ><button id="previewMode" aria-pressed="false">交互预览</button
           ><button id="selectTool" aria-pressed="true">↖ 选择／框选</button
           ><button id="panTool" aria-pressed="false">✋ 移动画布</button
-          ><button id="selectAll">全选</button><button id="remove">删除所选</button><button id="zoomOut">−</button><span id="zoomLabel">70%</span
-          ><button id="zoomIn">＋</button>
+          ><button id="selectAll">全选</button><button id="remove">删除所选</button><button id="zoomOut" aria-label="缩小画布">−</button><span id="zoomLabel">70%</span
+          ><button id="zoomIn" aria-label="放大画布">＋</button><button id="fitSelection" type="button">定位选中</button><button id="fitAll" type="button">显示全部</button><button id="actualSize" type="button">100%</button>
         </div>
         <div class="viewport" id="viewport">
           <div class="stage-wrap">
@@ -444,10 +473,15 @@
               ><button id="quickDelete" type="button">删除</button>
             </div>
           </div>
+          <div id="emptyState" class="empty-state">
+            <h2>从一个画板开始</h2><p class="hint">组合模块，或导入截图作为设计参考。</p>
+            <div class="empty-actions"><button id="emptyAdd" class="primary" type="button">新建手机画板</button><button id="emptyImport" type="button">导入截图</button><button id="emptyHelp" type="button">查看操作指南</button></div>
+          </div>
         </div>
-        <p class="hint">
+        <div class="canvas-footer"><p class="hint">选择对象后编辑属性 · 草稿仅保存在当前浏览器</p>
+        <details id="canvasHelp"><summary>操作指南与快捷键</summary><p class="hint">
           快捷键：⌘/Ctrl+A 全选，⌘/Ctrl+C 复制，⌘/Ctrl+V 粘贴，⌘/Ctrl+D 创建副本，Delete 删除，Esc 取消选择。复制对象可在当前工作台粘贴。点选或框选对象后，在选中对象（或容器内部空白处）按住左键拖动即可移动；框选/多选后拖任意选中对象可整体一起移动，容器与内部元素作为一组联动。拖动对象时自动显示对齐参考线：边缘对齐（左右/上下）、中心点对齐（横向/纵向）、以及三个对象间距相等时的等间距分布线。在大画布空白处按住左键拖动框选，碰到即选中。选择手形工具拖动画布视野；预览模式可点击按钮、按钮组和图标查看示例反馈。
-        </p>
+        </p></details></div>
       </main>
       <aside class="side right">
         <h2>选中内容的设置</h2>
@@ -459,50 +493,6 @@
         <p id="selection" class="picked">请选择画板或元素</p>
         <section id="panelDesign" role="tabpanel" aria-labelledby="tabDesign">
         <div id="fields" class="fields" hidden>
-          <details id="stylePresets" hidden open>
-            <summary>基础样式</summary>
-            <p class="hint">点击样式作为起点，下方参数仍可调整。</p>
-            <div class="style-grid">
-              <button type="button" class="style-option" data-style="A">
-                A 描边实心<span class="style-preview"><span>时间</span><span>事件</span></span></button
-              ><button type="button" class="style-option" data-style="B">
-                B 浅底实心<span class="style-preview soft"><span>时间</span><span>事件</span></span></button
-              ><button type="button" class="style-option" data-style="C">
-                C 无框实心<span class="style-preview plain"><span>时间</span><span>事件</span></span></button
-              ><button type="button" class="style-option" data-style="D">
-                D 双层描边<span class="style-preview outline"><span>时间</span><span>事件</span></span></button
-              ><button type="button" class="style-option" data-style="E">
-                E 浅色选中<span class="style-preview light"><span>时间</span><span>事件</span></span></button
-              ><button type="button" class="style-option" data-style="F">
-                F 分隔胶囊<span class="style-preview split"><span>时间</span><span>事件</span></span>
-              </button>
-            </div>
-          </details>
-          <details id="buttonPresets" hidden open>
-            <summary>按钮基础样式</summary>
-            <p class="hint">选择样式后，颜色和圆角仍可调整。</p>
-            <div class="style-grid">
-              <button class="style-option" type="button" data-button-style="solid">
-                实心胶囊<span class="style-preview"><span>按钮</span></span></button
-              ><button class="style-option" type="button" data-button-style="outline">
-                描边按钮<span class="style-preview outline"><span>按钮</span></span></button
-              ><button class="style-option" type="button" data-button-style="soft">
-                浅色按钮<span class="style-preview light"><span>按钮</span></span></button
-              ><button class="style-option" type="button" data-button-style="square">
-                圆角方形<span class="style-preview split"><span>按钮</span></span>
-              </button>
-            </div>
-          </details>
-          <details id="chartPresets" hidden open>
-            <summary>图表基础样式</summary>
-            <p class="hint">以下使用示例数据展示。</p>
-            <div class="style-grid">
-              <button class="style-option" type="button" data-chart-style="pie">◕ 实心饼图</button
-              ><button class="style-option" type="button" data-chart-style="donut">◉ 圆环图</button
-              ><button class="style-option" type="button" data-chart-style="half">◠ 半圆环</button
-              ><button class="style-option" type="button" data-chart-style="double">◎ 双层圆环</button>
-            </div>
-          </details>
           <details open>
             <summary>内容与尺寸</summary>
             <div class="field-grid">
@@ -518,12 +508,6 @@
                 </select></label
               >
             </div>
-          </details>
-          <details id="constraints" hidden>
-            <summary>容器尺寸变化时</summary><div class="field-grid">
-              <label>横向<select id="constraintX"><option value="start">保持左边距</option><option value="end">保持右边距</option><option value="center">保持居中偏移</option><option value="stretch">左右拉伸</option></select></label>
-              <label>纵向<select id="constraintY"><option value="start">保持上边距</option><option value="end">保持下边距</option><option value="center">保持居中偏移</option><option value="stretch">上下拉伸</option></select></label>
-            </div><p class="hint">容器采用自由摆放时生效；自动排列时由排列规则控制。</p>
           </details>
           <details id="boardLayout" hidden open>
             <summary>容器排列</summary><div class="field-grid">
@@ -550,6 +534,56 @@
                 ><button data-radius="16">大圆角</button><button data-radius="999">胶囊</button>
               </div>
             </div>
+          </details>
+          <details id="stylePresets" hidden>
+            <summary>基础样式</summary>
+            <p class="hint">点击样式作为起点，下方参数仍可调整。</p>
+            <div class="style-grid">
+              <button type="button" class="style-option" data-style="A">
+                A 描边实心<span class="style-preview"><span>时间</span><span>事件</span></span></button
+              ><button type="button" class="style-option" data-style="B">
+                B 浅底实心<span class="style-preview soft"><span>时间</span><span>事件</span></span></button
+              ><button type="button" class="style-option" data-style="C">
+                C 无框实心<span class="style-preview plain"><span>时间</span><span>事件</span></span></button
+              ><button type="button" class="style-option" data-style="D">
+                D 双层描边<span class="style-preview outline"><span>时间</span><span>事件</span></span></button
+              ><button type="button" class="style-option" data-style="E">
+                E 浅色选中<span class="style-preview light"><span>时间</span><span>事件</span></span></button
+              ><button type="button" class="style-option" data-style="F">
+                F 分隔胶囊<span class="style-preview split"><span>时间</span><span>事件</span></span>
+              </button>
+            </div>
+          </details>
+          <details id="buttonPresets" hidden>
+            <summary>按钮基础样式</summary>
+            <p class="hint">选择样式后，颜色和圆角仍可调整。</p>
+            <div class="style-grid">
+              <button class="style-option" type="button" data-button-style="solid">
+                实心胶囊<span class="style-preview"><span>按钮</span></span></button
+              ><button class="style-option" type="button" data-button-style="outline">
+                描边按钮<span class="style-preview outline"><span>按钮</span></span></button
+              ><button class="style-option" type="button" data-button-style="soft">
+                浅色按钮<span class="style-preview light"><span>按钮</span></span></button
+              ><button class="style-option" type="button" data-button-style="square">
+                圆角方形<span class="style-preview split"><span>按钮</span></span>
+              </button>
+            </div>
+          </details>
+          <details id="chartPresets" hidden>
+            <summary>图表基础样式</summary>
+            <p class="hint">以下使用示例数据展示。</p>
+            <div class="style-grid">
+              <button class="style-option" type="button" data-chart-style="pie">◕ 实心饼图</button
+              ><button class="style-option" type="button" data-chart-style="donut">◉ 圆环图</button
+              ><button class="style-option" type="button" data-chart-style="half">◠ 半圆环</button
+              ><button class="style-option" type="button" data-chart-style="double">◎ 双层圆环</button>
+            </div>
+          </details>
+          <details id="constraints" hidden>
+            <summary>容器尺寸变化时</summary><div class="field-grid">
+              <label>横向<select id="constraintX"><option value="start">保持左边距</option><option value="end">保持右边距</option><option value="center">保持居中偏移</option><option value="stretch">左右拉伸</option></select></label>
+              <label>纵向<select id="constraintY"><option value="start">保持上边距</option><option value="end">保持下边距</option><option value="center">保持居中偏移</option><option value="stretch">上下拉伸</option></select></label>
+            </div><p class="hint">容器采用自由摆放时生效；自动排列时由排列规则控制。</p>
           </details>
         </div>
         <div id="multi" hidden><p class="hint">对选中的对象调整对齐方式：</p><div class="alignment">
@@ -744,6 +778,34 @@
           stage.draw();
           positionQuick();
         }
+        function fitNodes(nodes) {
+          if (!nodes.length) { $("status").textContent = "画布上还没有对象。"; return; }
+          const rects = nodes.map(n => {
+            const parent = n.hasName("board") ? null : parentBoard(n);
+            return { x: n.x() + (parent ? parent.x() : 0), y: n.y() + (parent ? parent.y() : 0), width: n.width(), height: n.height() };
+          });
+          const left = Math.min(...rects.map(r => r.x)), top = Math.min(...rects.map(r => r.y));
+          const right = Math.max(...rects.map(r => r.x + r.width)), bottom = Math.max(...rects.map(r => r.y + r.height));
+          zoom = Math.max(0.02, Math.min(2, Math.max(1, stage.width() - 80) / Math.max(1, right - left), Math.max(1, stage.height() - 80) / Math.max(1, bottom - top)));
+          stage.scale({ x: zoom, y: zoom });
+          stage.position({ x: stage.width() / 2 - (left + right) * zoom / 2, y: stage.height() / 2 - (top + bottom) * zoom / 2 });
+          coverBackground(); $("zoomLabel").textContent = Math.round(zoom * 100) + "%";
+          stage.draw(); positionQuick();
+        }
+        $("fitSelection").onclick = () => fitNodes(selection.length ? selection : activeBoard ? [activeBoard] : [...boards(), ...items()]);
+        $("fitAll").onclick = () => fitNodes([...boards(), ...items()]);
+        $("actualSize").onclick = () => setZoom(1);
+        function showLeftPanel(name) {
+          for (const [tab, panel] of [["tabAssets", "panelAssets"], ["tabLayers", "panelLayers"]]) {
+            const selected = panel === name;
+            $(tab).setAttribute("aria-selected", String(selected)); $(panel).hidden = !selected;
+          }
+        }
+        $("tabAssets").onclick = () => showLeftPanel("panelAssets");
+        $("tabLayers").onclick = () => showLeftPanel("panelLayers");
+        $("emptyAdd").onclick = () => { $("addBoard").click(); fitNodes([activeBoard]); };
+        $("emptyImport").onclick = () => { showLeftPanel("panelAssets"); $("screenshotPanel").open = true; $("agentFile").scrollIntoView({ block: "nearest" }); $("agentFile").click(); };
+        $("emptyHelp").onclick = () => { $("canvasHelp").open = true; $("canvasHelp").scrollIntoView({ block: "nearest" }); };
         new ResizeObserver(() => {
           stage.size({ width: $("viewport").clientWidth, height: $("viewport").clientHeight });
           coverBackground();
@@ -1282,14 +1344,21 @@
         function updateLayers() {
           const list = $("layers");
           list.replaceChildren();
-          boards().forEach((b) => {
+          const addRow = (node, child = false) => {
             const button = document.createElement("button");
-            button.textContent =
-              (b === activeBoard ? "● " : "○ ") + b.getAttr("itemName") + " · " + b.find(".item").length + " 项";
-            button.className = b === activeBoard ? "active" : "";
-            button.onclick = () => setSelection([b]);
+            button.type = "button";
+            button.className = child ? "layer-child" : "";
+            button.textContent = node.getAttr("itemName") || types[node.getAttr("type")] || "未命名对象";
+            button.setAttribute("aria-pressed", String(selection.includes(node)));
+            button.onclick = (event) => setSelection(event.shiftKey ? (selection.includes(node) ? selection.filter(n => n !== node) : [...selection, node]) : [node]);
             list.append(button);
+          };
+          boards().forEach(board => {
+            addRow(board);
+            Array.from(board.getChildren()).filter(n => n.hasName("item")).forEach(n => addRow(n, true));
           });
+          Array.from(free.getChildren()).filter(n => n.hasName("item")).forEach(n => addRow(n));
+          if (!list.childElementCount) list.textContent = "还没有对象，请到素材中添加画板或模块。";
         }
         function setSelection(a) {
           selection = a;
@@ -1382,6 +1451,7 @@
             : "请选择画板或元素。";
         }
         function refresh() {
+          $("emptyState").hidden = boards().length > 0 || items().length > 0;
           let one = selection.length === 1,
             n = selection[0];
           $("selection").textContent = selection.length
