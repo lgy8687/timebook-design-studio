@@ -935,7 +935,7 @@
               );
           } else if (d.type === "image") {
             const image = new Image();
-            const picture = new Konva.Image({ width: w, height: h, listening: false });
+            const picture = new Konva.Image({ width: w, height: h });
             g.add(picture);
             image.onload = () => { picture.image(image); if (g.getStage()) g.getLayer().batchDraw(); };
             image.src = d.imageData || "";
@@ -1327,6 +1327,7 @@
             相对画板位置: { 左: Math.round(n.x()), 上: Math.round(n.y()) },
             尺寸: { 宽: Math.round(n.width() * n.scaleX()), 高: Math.round(n.height() * n.scaleY()) },
             文字: a.label,
+            识别文字: a.type === "text" ? !!a.ocrText : undefined,
             按钮数量: a.type === "group" ? a.count : undefined,
             基础样式: a.type === "group" ? a.preset || "A" : undefined,
             图标: a.type === "icon" ? a.iconName : undefined,
@@ -1970,8 +1971,8 @@
             }
             function col(v, def) {
               if (v === undefined) return def;
-              if (typeof v !== "string" || !/^#[0-9a-f]{6}$/i.test(v))
-                throw Error("颜色请使用 # 加六位色值，例如 #526a91。");
+              if (typeof v !== "string" || (v !== "transparent" && !/^#[0-9a-f]{6}$/i.test(v)))
+                throw Error("颜色请使用 # 加六位色值或 transparent，例如 #526a91。");
               return v;
             }
             function parse(o, depth = 0) {
@@ -2002,6 +2003,7 @@
                 ...base,
                 ...v,
                 label: String(o.文字 ?? base.label ?? "").slice(0, 300),
+                ocrText: type === "text" && o.识别文字 === true,
                 fill: col(o.背景, base.fill),
                 color: col(o.文字颜色, base.color),
                 stroke: col(o.边框颜色, base.stroke),
@@ -2287,3 +2289,4 @@
     </script>
   </body>
 </html>
+
