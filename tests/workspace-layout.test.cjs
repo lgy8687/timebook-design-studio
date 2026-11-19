@@ -22,3 +22,21 @@ test('left tabs keep assets and layers mutually exclusive',()=>{
  context.name='panelLayers';vm.runInContext('showLeftPanel(name)',context);assert.equal(elements.panelAssets.hidden,true);assert.equal(elements.panelLayers.hidden,false);assert.equal(elements.tabLayers['aria-selected'],'true');
  context.name='panelAssets';vm.runInContext('showLeftPanel(name)',context);assert.equal(elements.panelAssets.hidden,false);assert.equal(elements.panelLayers.hidden,true);
 });
+
+test('fit canvas uses transformed visual bounds when available',()=>{
+ let scale,position;
+ const context=vm.createContext({zoom:.7,layer:{},stage:{width:()=>800,height:()=>600,scale:v=>scale=v,position:v=>position=v,draw:()=>{}},coverBackground:()=>{},positionQuick:()=>{},$:()=>({textContent:''})});
+ vm.runInContext(section('function fitNodes(nodes)', '$("fitSelection").onclick'),context);
+ context.nodes=[{getClientRect:()=>({x:100,y:200,width:400,height:100})}];
+ vm.runInContext('fitNodes(nodes)',context);
+ assert.equal(scale.x,1.8);assert.equal(position.x,-140);assert.equal(position.y,-150);
+});
+
+test('OCR cleanup failure always releases the analyze button',async()=>{
+ const button={disabled:true};const context=vm.createContext({agentBusy:true,$:()=>button,console:{warn:()=>{}}});
+ vm.runInContext(section('async function finishOcr(worker)', 'function serialize()'),context);
+ context.worker={terminate:async()=>{throw Error('worker already stopped');}};
+ await vm.runInContext('finishOcr(worker)',context);
+ assert.equal(context.agentBusy,false);assert.equal(button.disabled,false);
+});
+

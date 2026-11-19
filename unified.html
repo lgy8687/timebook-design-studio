@@ -72,7 +72,7 @@
       }
       .layout {
         display: grid;
-        grid-template-columns: 230px minmax(300px, 1fr) 320px;
+        grid-template-columns: 230px minmax(0, 1fr) 320px;
         align-items: start;
       }
       .side {
@@ -385,15 +385,44 @@
       .tools button { min-height: 36px; }
       #zoomLabel { min-width: 44px; text-align: center; }
       [hidden] { display: none !important; }
+      .mobile-workspace { display: none; }
+      .fields .transparent-control { flex-direction: row; align-items: center; gap: 6px; margin-top: 6px; font-size: 12px; }
+      .fields .transparent-control input { width: auto; }
+      .field-grid > div { min-width: 0; }
+      input[type="color"]:disabled { opacity: .45; }
+      @media (max-width: 850px) {
+        .mobile-workspace { display: flex; position: sticky; top: 0; z-index: 10; gap: 6px; padding: 8px 12px; background: #fff; border-bottom: 1px solid #dce6e9; }
+        .mobile-workspace button { flex: 1; min-height: 44px; }
+        .mobile-workspace button[aria-pressed="true"] { background: #526a91; color: #fff; }
+        .layout[data-mobile-panel="canvas"] > .side,
+        .layout[data-mobile-panel="assets"] > .canvas,
+        .layout[data-mobile-panel="assets"] > .right,
+        .layout[data-mobile-panel="properties"] > .canvas,
+        .layout[data-mobile-panel="properties"] > .left { display: none; }
+        .layout .canvas { min-width: 0; padding: 12px; }
+        .tools { gap: 6px; }
+        .tools button { min-height: 44px; }
+        .layout .viewport { height: 60vh; height: 60dvh; min-height: 280px; }
+        .side button, .side summary { min-height: 44px; }
+        .side input:not([type="checkbox"]), .side select, .side textarea { max-width: 100%; min-height: 44px; font-size: 16px; }
+        .field-grid > label { min-width: 0; }
+        .field-grid input, .field-grid select { width: 100%; }
+        .empty-state { padding: 16px; }
+      }
     </style>
   </head>
   <body>
     <header>
-      <h1>统一设计工作台 <small>· v0.10.0</small></h1>
+      <h1>统一设计工作台 <small>· v0.10.1</small></h1>
       <a href="studio.html">原设计原型</a><a href="canvas.html">原自由画布</a><button id="undo" disabled>撤销</button><button id="redo" disabled>重做</button><small id="saveState" role="status">本地草稿</small><button id="save">保存草稿</button
       ><button id="reset">新建空白</button>
     </header>
-    <div class="layout">
+    <nav class="mobile-workspace" aria-label="工作台区域">
+      <button id="mobileAssets" type="button" aria-pressed="false">素材与图层</button>
+      <button id="mobileCanvas" type="button" aria-pressed="true">画布</button>
+      <button id="mobileProperties" type="button" aria-pressed="false">属性</button>
+    </nav>
+    <div class="layout" id="workspaceLayout" data-mobile-panel="canvas">
       <aside class="side left">
         <div class="panel-tabs left-tabs" role="tablist" aria-label="工作区面板">
           <button id="tabAssets" role="tab" aria-selected="true" aria-controls="panelAssets" type="button">素材</button>
@@ -519,10 +548,10 @@
           <details open id="appearance">
             <summary>外观与文字</summary>
             <div class="field-grid">
-              <label id="fillRow">背景颜色<input type="color" id="fill" /></label
+              <div id="fillRow"><label for="fill">背景颜色</label><input type="color" id="fill" /><label class="transparent-control"><input type="checkbox" id="fillTransparent" />透明背景</label></div
               ><label id="accentRow" hidden>选中颜色<input type="color" id="accent" /></label
               ><label id="colorRow">文字颜色<input type="color" id="color" /></label
-              ><label id="strokeRow">边框／线条颜色<input type="color" id="stroke" /></label
+              ><div id="strokeRow"><label for="stroke" id="strokeLabel">边框／线条颜色</label><input type="color" id="stroke" /><label class="transparent-control"><input type="checkbox" id="strokeTransparent" />透明边框</label></div
               ><label id="radiusRow">圆角<input type="number" min="0" max="999" id="radius" /></label
               ><label id="borderWidthRow">边框粗细<input type="number" min="0" max="20" id="borderWidth" /></label
               ><label id="fontRow">字号<input type="number" min="8" max="100" id="fontSize" /></label>
@@ -781,6 +810,7 @@
         function fitNodes(nodes) {
           if (!nodes.length) { $("status").textContent = "画布上还没有对象。"; return; }
           const rects = nodes.map(n => {
+            if (typeof n.getClientRect === "function") return n.getClientRect({ relativeTo: layer });
             const parent = n.hasName("board") ? null : parentBoard(n);
             return { x: n.x() + (parent ? parent.x() : 0), y: n.y() + (parent ? parent.y() : 0), width: n.width(), height: n.height() };
           });
@@ -795,18 +825,43 @@
         $("fitSelection").onclick = () => fitNodes(selection.length ? selection : activeBoard ? [activeBoard] : [...boards(), ...items()]);
         $("fitAll").onclick = () => fitNodes([...boards(), ...items()]);
         $("actualSize").onclick = () => setZoom(1);
+        function showMobilePanel(name) {
+          $("workspaceLayout").dataset.mobilePanel = name;
+          for (const [id, panel] of [["mobileAssets", "assets"], ["mobileCanvas", "canvas"], ["mobileProperties", "properties"]])
+            $(id).setAttribute("aria-pressed", String(panel === name));
+        }
+        $("mobileAssets").onclick = () => showMobilePanel("assets");
+        $("mobileCanvas").onclick = () => showMobilePanel("canvas");
+        $("mobileProperties").onclick = () => showMobilePanel("properties");
         function showLeftPanel(name) {
           for (const [tab, panel] of [["tabAssets", "panelAssets"], ["tabLayers", "panelLayers"]]) {
             const selected = panel === name;
             $(tab).setAttribute("aria-selected", String(selected)); $(panel).hidden = !selected;
+            $(tab).tabIndex = selected ? 0 : -1;
           }
         }
         $("tabAssets").onclick = () => showLeftPanel("panelAssets");
         $("tabLayers").onclick = () => showLeftPanel("panelLayers");
         $("emptyAdd").onclick = () => { $("addBoard").click(); fitNodes([activeBoard]); };
-        $("emptyImport").onclick = () => { showLeftPanel("panelAssets"); $("screenshotPanel").open = true; $("agentFile").scrollIntoView({ block: "nearest" }); $("agentFile").click(); };
+        $("emptyImport").onclick = () => { showMobilePanel("assets"); showLeftPanel("panelAssets"); $("screenshotPanel").open = true; $("agentFile").scrollIntoView({ block: "nearest" }); $("agentFile").click(); };
         $("emptyHelp").onclick = () => { $("canvasHelp").open = true; $("canvasHelp").scrollIntoView({ block: "nearest" }); };
+        document.querySelectorAll('[role="tablist"]').forEach(list => {
+          const tabs = Array.from(list.querySelectorAll('[role="tab"]'));
+          tabs.forEach(tab => tab.tabIndex = tab.getAttribute("aria-selected") === "true" ? 0 : -1);
+          list.addEventListener("click", event => {
+            const active = event.target.closest('[role="tab"]');
+            if (active) tabs.forEach(tab => tab.tabIndex = tab === active ? 0 : -1);
+          });
+          list.addEventListener("keydown", event => {
+            const current = tabs.indexOf(document.activeElement);
+            if (current < 0 || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+            event.preventDefault();
+            const next = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : (current + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+            tabs[next].click(); tabs[next].focus();
+          });
+        });
         new ResizeObserver(() => {
+          if (!$("viewport").clientWidth || !$("viewport").clientHeight) return;
           stage.size({ width: $("viewport").clientWidth, height: $("viewport").clientHeight });
           coverBackground();
           stage.draw();
@@ -1498,7 +1553,7 @@
               a.type === "button" ? "点击后颜色" : a.type === "chart" ? "图表第二色" : "选中颜色";
             $("colorRow").hidden = isBoard || a.type === "icon";
             $("strokeRow").hidden = false;
-            $("strokeRow").firstChild.textContent = a.type === "chart" ? "图表第三色" : "边框／线条颜色";
+            $("strokeLabel").textContent = a.type === "chart" ? "图表第三色" : "边框／线条颜色";
             $("radiusRow").hidden = !isBoard && ["chart", "icon", "text"].includes(a.type);
             $("borderWidthRow").hidden = !isBoard && ["chart", "icon", "text"].includes(a.type);
             $("shapeRow").hidden = !isBoard && ["chart", "icon", "text"].includes(a.type);
@@ -1510,15 +1565,20 @@
               y: Math.round(n.y()),
               width: Math.round(n.width()),
               height: Math.round(n.height()),
-              fill: a.fill || "#ffffff",
+              fill: a.fill === "transparent" ? "#ffffff" : a.fill || "#ffffff",
               accent: a.accent || "#526a91",
               color: a.color || "#273d4c",
-              stroke: a.stroke || "#526a91",
+              stroke: a.stroke === "transparent" ? "#526a91" : a.stroke || "#526a91",
               radius: a.radius || 0,
               fontSize: a.fontSize || 14,
               count: a.count || 2, constraintX: a.constraintX || "start", constraintY: a.constraintY || "start", borderWidth: a.borderWidth ?? 1, layoutMode: a.layoutMode || "free", layoutGap: a.layoutGap ?? 8, layoutPadding: a.layoutPadding ?? 12,
             }))
               $(id).value = val;
+            for (const prop of ["fill", "stroke"]) {
+              const transparent = a[prop] === "transparent";
+              $(prop + "Transparent").checked = transparent;
+              $(prop).disabled = transparent;
+            }
           }
           if (!one) $("interactionRow").hidden = true;
           updateSummary();
@@ -1831,6 +1891,15 @@
             updateSummary();
             positionQuick();
           });
+        for (const prop of ["fill", "stroke"]) {
+          $(prop + "Transparent").addEventListener("change", () => {
+            if (selection.length !== 1) return;
+            const node = selection[0];
+            node.setAttr(prop, $(prop + "Transparent").checked ? "transparent" : $(prop).value);
+            if (node.hasName("board")) redrawBoard(node); else drawItem(node);
+            refresh(); transformer.forceUpdate(); layer.batchDraw(); positionQuick();
+          });
+        }
         document.querySelectorAll("[data-radius]").forEach(
           (b) =>
             (b.onclick = () => {
@@ -2222,7 +2291,7 @@
           };
           preview.onpointermove = update;
           preview.onpointerup = e => { update(e); start = null; };
-          preview.onpointercancel = () => { start = null; };
+          preview.onpointercancel = () => { start = null; rect = null; box.hidden = true; apply.disabled = true; };
           $("regionCancel").onclick = () => dialog.close("cancel");
           apply.onclick = () => dialog.close("apply");
           dialog.returnValue = "";
@@ -2286,8 +2355,13 @@
             activeBoard = draft; setSelection([draft]); refresh(); checkpoint();
             agentMessage(elements ? "已生成 " + elements.length + " 个可编辑元素。模型结果是估计值，请对照截图检查文字、颜色和位置；交互不会自动还原。" : "已在截图右边生成 " + Math.min(lines.length, 300) + " 个可编辑文字。颜色、图标、外框和交互尚未自动还原，请对照原图调整。");
           } catch (e) { agentMessage("识别失败：" + (e.message || "请检查网络后重试")); }
-          finally { if (worker) await worker.terminate(); agentBusy = false; $("agentAnalyze").disabled = false; }
+          finally { await finishOcr(worker); }
         };
+        async function finishOcr(worker) {
+          try { if (worker) await worker.terminate(); }
+          catch (error) { console.warn("OCR worker cleanup failed", error); }
+          finally { agentBusy = false; $("agentAnalyze").disabled = false; }
+        }
         function serialize() {
           return boards().map((b) => ({
             id: b.id(),
@@ -2359,4 +2433,5 @@
     </script>
   </body>
 </html>
+
 
