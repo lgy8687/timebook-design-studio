@@ -72,7 +72,7 @@
       }
       .layout {
         display: grid;
-        grid-template-columns: 230px minmax(300px, 1fr) 320px;
+        grid-template-columns: 230px minmax(0, 1fr) 320px;
         align-items: start;
       }
       .side {
@@ -366,17 +366,92 @@
       [data-chart-style="donut"]::before {mask:radial-gradient(circle,transparent 40%,black 43%)}
       [data-chart-style="half"]::before {mask:radial-gradient(circle,transparent 40%,black 43%);clip-path:inset(0 0 50%)}
       [data-chart-style="double"]::before {mask:radial-gradient(circle,transparent 20%,black 22% 40%,transparent 42% 48%,black 50%)}
+
+      .left-tabs { position: sticky; top: 0; z-index: 2; background: #fff; padding-bottom: 12px; }
+      #panelAssets > details { margin-top: 16px; }
+      #panelAssets input[type="file"] { max-width: 100%; font-size: 12px; }
+      .layers button { width: 100%; text-align: left; overflow-wrap: anywhere; margin: 3px 0; }
+      .layers button.layer-child { padding-left: 22px; font-size: 12px; }
+      .layers button[aria-pressed="true"] { background: #e5eef8; border-color: #526a91; }
+      .viewport { position: relative; }
+      .empty-state { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; padding: 24px; gap: 12px; pointer-events: none; }
+      .empty-state h2, .empty-state p { margin: 0; }
+      .empty-state button { pointer-events: auto; }
+      .empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+      .primary { background: #526a91; color: #fff; border-color: #526a91; }
+      .canvas-footer { margin-top: 10px; }
+      .canvas-footer summary { font-weight: 400; font-size: 12px; }
+      .canvas-footer > p { margin: 6px 0; }
+      .tools button { min-height: 36px; }
+      #zoomLabel { min-width: 44px; text-align: center; }
+      [hidden] { display: none !important; }
+      .mobile-workspace { display: none; }
+      .fields .transparent-control { flex-direction: row; align-items: center; gap: 6px; margin-top: 6px; font-size: 12px; }
+      .fields .transparent-control input { width: auto; }
+      .field-grid > div { min-width: 0; }
+      input[type="color"]:disabled { opacity: .45; }
+      @media (max-width: 850px) {
+        .mobile-workspace { display: flex; position: sticky; top: 0; z-index: 10; gap: 6px; padding: 8px 12px; background: #fff; border-bottom: 1px solid #dce6e9; }
+        .mobile-workspace button { flex: 1; min-height: 44px; }
+        .mobile-workspace button[aria-pressed="true"] { background: #526a91; color: #fff; }
+        .layout[data-mobile-panel="canvas"] > .side,
+        .layout[data-mobile-panel="assets"] > .canvas,
+        .layout[data-mobile-panel="assets"] > .right,
+        .layout[data-mobile-panel="properties"] > .canvas,
+        .layout[data-mobile-panel="properties"] > .left { display: none; }
+        .layout .canvas { min-width: 0; padding: 12px; }
+        .tools { gap: 6px; }
+        .tools button { min-height: 44px; }
+        .layout .viewport { height: 60vh; height: 60dvh; min-height: 280px; }
+        .side button, .side summary { min-height: 44px; }
+        .side input:not([type="checkbox"]), .side select, .side textarea { max-width: 100%; min-height: 44px; font-size: 16px; }
+        .field-grid > label { min-width: 0; }
+        .field-grid input, .field-grid select { width: 100%; }
+        .empty-state { padding: 16px; }
+      }
     </style>
   </head>
   <body>
     <header>
-      <h1>统一设计工作台 <small>· v0.9.1</small></h1>
+      <h1>统一设计工作台 <small>· v0.10.1</small></h1>
       <a href="studio.html">原设计原型</a><a href="canvas.html">原自由画布</a><button id="undo" disabled>撤销</button><button id="redo" disabled>重做</button><small id="saveState" role="status">本地草稿</small><button id="save">保存草稿</button
       ><button id="reset">新建空白</button>
     </header>
-    <div class="layout">
+    <nav class="mobile-workspace" aria-label="工作台区域">
+      <button id="mobileAssets" type="button" aria-pressed="false">素材与图层</button>
+      <button id="mobileCanvas" type="button" aria-pressed="true">画布</button>
+      <button id="mobileProperties" type="button" aria-pressed="false">属性</button>
+    </nav>
+    <div class="layout" id="workspaceLayout" data-mobile-panel="canvas">
       <aside class="side left">
-        <h2>截图分析 Agent</h2>
+        <div class="panel-tabs left-tabs" role="tablist" aria-label="工作区面板">
+          <button id="tabAssets" role="tab" aria-selected="true" aria-controls="panelAssets" type="button">素材</button>
+          <button id="tabLayers" role="tab" aria-selected="false" aria-controls="panelLayers" type="button">图层</button>
+        </div>
+        <section id="panelAssets" role="tabpanel" aria-labelledby="tabAssets">
+        <h2>添加模块</h2>
+        <div class="modules">
+          <button id="containerToggle" type="button" aria-expanded="false">容器 ▾</button
+          ><button data-add="frame">外框</button><button data-add="button">按钮</button
+          ><button data-add="group">按钮组</button><button data-add="text">文字</button
+          ><button data-add="chart">圆环图</button
+          ><button id="iconToggle" type="button" aria-expanded="false">图标库 ▾</button>
+        </div>
+        <div id="containerLibrary" class="library" hidden>
+          <h3>容器预设</h3>
+          <button id="addBoard" class="preset">三星 S24 Ultra · 384 × 832</button>
+          <p class="hint">尺寸是可调整的网页参考值。</p>
+        </div>
+        <div id="iconLibrary" class="library" hidden>
+          <h3>图标库</h3>
+          <label class="hint" for="iconSearch">搜索图标</label
+          ><input id="iconSearch" placeholder="例如：日历" style="width: 100%; margin: 5px 0 10px" />
+          <div id="iconGrid" class="icon-grid"></div>
+        </div>
+        <label class="hint"><input type="checkbox" id="addOutside" /> 添加到大画布（容器外）</label>
+        <p class="hint">点击容器选择三星预设；拖动元素进出容器可改变归属。</p>
+        <details id="screenshotPanel" class="note">
+        <summary>截图导入与识别</summary>
         <p class="hint">先导入截图，再识别文字，生成并排的可编辑草稿。</p>
         <input id="agentFile" type="file" accept="image/png,image/jpeg,image/webp" aria-label="选择截图" />
         <button id="agentImport" type="button" style="width:100%;margin-top:8px">1. 放入手机容器</button>
@@ -400,30 +475,13 @@
         </dialog>
         <button id="agentAnalyze" type="button" style="width:100%;margin-top:8px">2. 分析截图生成草稿</button>
         <p id="agentStatus" class="hint" role="status">识别在浏览器中进行；首次使用需要联网下载识别工具和语言包。</p>
-        <h2>添加模块</h2>
-        <div class="modules">
-          <button id="containerToggle" type="button" aria-expanded="false">容器 ▾</button
-          ><button data-add="frame">外框</button><button data-add="button">按钮</button
-          ><button data-add="group">按钮组</button><button data-add="text">文字</button
-          ><button data-add="chart">圆环图</button
-          ><button id="iconToggle" type="button" aria-expanded="false">图标库 ▾</button>
-        </div>
-        <div id="containerLibrary" class="library" hidden>
-          <h3>容器预设</h3>
-          <button id="addBoard" class="preset">三星 S24 Ultra · 384 × 832</button>
-          <p class="hint">尺寸是可调整的网页参考值。</p>
-        </div>
-        <div id="iconLibrary" class="library" hidden>
-          <h3>图标库</h3>
-          <label class="hint" for="iconSearch">搜索图标</label
-          ><input id="iconSearch" placeholder="例如：日历" style="width: 100%; margin: 5px 0 10px" />
-          <div id="iconGrid" class="icon-grid"></div>
-        </div>
-        <label class="hint"><input type="checkbox" id="addOutside" /> 添加到大画布（容器外）</label>
-        <p class="hint">点击容器选择三星预设；拖动元素进出容器可改变归属。</p>
+        </details>
+        </section>
+        <section id="panelLayers" role="tabpanel" aria-labelledby="tabLayers" hidden>
         <h2>画板与元素</h2>
         <div id="layers" class="layers"></div>
         <p class="hint">点选对象；空白处拖动框选，碰到即选中。Shift 点击可增减选择。</p>
+        </section>
       </aside>
       <main class="canvas">
         <div class="tools">
@@ -431,8 +489,8 @@
           ><button id="previewMode" aria-pressed="false">交互预览</button
           ><button id="selectTool" aria-pressed="true">↖ 选择／框选</button
           ><button id="panTool" aria-pressed="false">✋ 移动画布</button
-          ><button id="selectAll">全选</button><button id="remove">删除所选</button><button id="zoomOut">−</button><span id="zoomLabel">70%</span
-          ><button id="zoomIn">＋</button>
+          ><button id="selectAll">全选</button><button id="remove">删除所选</button><button id="zoomOut" aria-label="缩小画布">−</button><span id="zoomLabel">70%</span
+          ><button id="zoomIn" aria-label="放大画布">＋</button><button id="fitSelection" type="button">定位选中</button><button id="fitAll" type="button">显示全部</button><button id="actualSize" type="button">100%</button>
         </div>
         <div class="viewport" id="viewport">
           <div class="stage-wrap">
@@ -444,10 +502,15 @@
               ><button id="quickDelete" type="button">删除</button>
             </div>
           </div>
+          <div id="emptyState" class="empty-state">
+            <h2>从一个画板开始</h2><p class="hint">组合模块，或导入截图作为设计参考。</p>
+            <div class="empty-actions"><button id="emptyAdd" class="primary" type="button">新建手机画板</button><button id="emptyImport" type="button">导入截图</button><button id="emptyHelp" type="button">查看操作指南</button></div>
+          </div>
         </div>
-        <p class="hint">
+        <div class="canvas-footer"><p class="hint">选择对象后编辑属性 · 草稿仅保存在当前浏览器</p>
+        <details id="canvasHelp"><summary>操作指南与快捷键</summary><p class="hint">
           快捷键：⌘/Ctrl+A 全选，⌘/Ctrl+C 复制，⌘/Ctrl+V 粘贴，⌘/Ctrl+D 创建副本，Delete 删除，Esc 取消选择。复制对象可在当前工作台粘贴。点选或框选对象后，在选中对象（或容器内部空白处）按住左键拖动即可移动；框选/多选后拖任意选中对象可整体一起移动，容器与内部元素作为一组联动。拖动对象时自动显示对齐参考线：边缘对齐（左右/上下）、中心点对齐（横向/纵向）、以及三个对象间距相等时的等间距分布线。在大画布空白处按住左键拖动框选，碰到即选中。选择手形工具拖动画布视野；预览模式可点击按钮、按钮组和图标查看示例反馈。
-        </p>
+        </p></details></div>
       </main>
       <aside class="side right">
         <h2>选中内容的设置</h2>
@@ -459,7 +522,49 @@
         <p id="selection" class="picked">请选择画板或元素</p>
         <section id="panelDesign" role="tabpanel" aria-labelledby="tabDesign">
         <div id="fields" class="fields" hidden>
-          <details id="stylePresets" hidden open>
+          <details open>
+            <summary>内容与尺寸</summary>
+            <div class="field-grid">
+              <label>名称<input id="itemName" /></label><label id="labelRow">文字<input id="label" /></label
+              ><label>左边位置<input type="number" id="x" /></label><label>上边位置<input type="number" id="y" /></label
+              ><label>宽度<input type="number" min="20" max="1600" id="width" /></label
+              ><label>高度<input type="number" min="20" max="2400" id="height" /></label
+              ><label id="countRow" hidden
+                >按钮数量<select id="count">
+                  <option>2</option>
+                  <option>3</option>
+                  <option>4</option>
+                </select></label
+              >
+            </div>
+          </details>
+          <details id="boardLayout" hidden open>
+            <summary>容器排列</summary><div class="field-grid">
+              <label>排列方式<select id="layoutMode"><option value="free">自由摆放</option><option value="horizontal">横向排列</option><option value="vertical">纵向排列</option></select></label>
+              <label>元素间距（px）<input id="layoutGap" type="number" min="0" max="200" /></label>
+              <label>内边距（px）<input id="layoutPadding" type="number" min="0" max="200" /></label>
+            </div><p class="hint">自动排列直接放在容器中的元素；宽高仍可单独调整。</p>
+          </details>
+          <details open id="appearance">
+            <summary>外观与文字</summary>
+            <div class="field-grid">
+              <div id="fillRow"><label for="fill">背景颜色</label><input type="color" id="fill" /><label class="transparent-control"><input type="checkbox" id="fillTransparent" />透明背景</label></div
+              ><label id="accentRow" hidden>选中颜色<input type="color" id="accent" /></label
+              ><label id="colorRow">文字颜色<input type="color" id="color" /></label
+              ><div id="strokeRow"><label for="stroke" id="strokeLabel">边框／线条颜色</label><input type="color" id="stroke" /><label class="transparent-control"><input type="checkbox" id="strokeTransparent" />透明边框</label></div
+              ><label id="radiusRow">圆角<input type="number" min="0" max="999" id="radius" /></label
+              ><label id="borderWidthRow">边框粗细<input type="number" min="0" max="20" id="borderWidth" /></label
+              ><label id="fontRow">字号<input type="number" min="8" max="100" id="fontSize" /></label>
+            </div>
+            <div id="shapeRow">
+              <span class="hint">常用形状</span>
+              <div class="colorline">
+                <button data-radius="0">直角</button><button data-radius="8">小圆角</button
+                ><button data-radius="16">大圆角</button><button data-radius="999">胶囊</button>
+              </div>
+            </div>
+          </details>
+          <details id="stylePresets" hidden>
             <summary>基础样式</summary>
             <p class="hint">点击样式作为起点，下方参数仍可调整。</p>
             <div class="style-grid">
@@ -478,7 +583,7 @@
               </button>
             </div>
           </details>
-          <details id="buttonPresets" hidden open>
+          <details id="buttonPresets" hidden>
             <summary>按钮基础样式</summary>
             <p class="hint">选择样式后，颜色和圆角仍可调整。</p>
             <div class="style-grid">
@@ -493,7 +598,7 @@
               </button>
             </div>
           </details>
-          <details id="chartPresets" hidden open>
+          <details id="chartPresets" hidden>
             <summary>图表基础样式</summary>
             <p class="hint">以下使用示例数据展示。</p>
             <div class="style-grid">
@@ -503,53 +608,11 @@
               ><button class="style-option" type="button" data-chart-style="double">◎ 双层圆环</button>
             </div>
           </details>
-          <details open>
-            <summary>内容与尺寸</summary>
-            <div class="field-grid">
-              <label>名称<input id="itemName" /></label><label id="labelRow">文字<input id="label" /></label
-              ><label>左边位置<input type="number" id="x" /></label><label>上边位置<input type="number" id="y" /></label
-              ><label>宽度<input type="number" min="20" max="1600" id="width" /></label
-              ><label>高度<input type="number" min="20" max="2400" id="height" /></label
-              ><label id="countRow" hidden
-                >按钮数量<select id="count">
-                  <option>2</option>
-                  <option>3</option>
-                  <option>4</option>
-                </select></label
-              >
-            </div>
-          </details>
           <details id="constraints" hidden>
             <summary>容器尺寸变化时</summary><div class="field-grid">
               <label>横向<select id="constraintX"><option value="start">保持左边距</option><option value="end">保持右边距</option><option value="center">保持居中偏移</option><option value="stretch">左右拉伸</option></select></label>
               <label>纵向<select id="constraintY"><option value="start">保持上边距</option><option value="end">保持下边距</option><option value="center">保持居中偏移</option><option value="stretch">上下拉伸</option></select></label>
             </div><p class="hint">容器采用自由摆放时生效；自动排列时由排列规则控制。</p>
-          </details>
-          <details id="boardLayout" hidden open>
-            <summary>容器排列</summary><div class="field-grid">
-              <label>排列方式<select id="layoutMode"><option value="free">自由摆放</option><option value="horizontal">横向排列</option><option value="vertical">纵向排列</option></select></label>
-              <label>元素间距（px）<input id="layoutGap" type="number" min="0" max="200" /></label>
-              <label>内边距（px）<input id="layoutPadding" type="number" min="0" max="200" /></label>
-            </div><p class="hint">自动排列直接放在容器中的元素；宽高仍可单独调整。</p>
-          </details>
-          <details open id="appearance">
-            <summary>外观与文字</summary>
-            <div class="field-grid">
-              <label id="fillRow">背景颜色<input type="color" id="fill" /></label
-              ><label id="accentRow" hidden>选中颜色<input type="color" id="accent" /></label
-              ><label id="colorRow">文字颜色<input type="color" id="color" /></label
-              ><label id="strokeRow">边框／线条颜色<input type="color" id="stroke" /></label
-              ><label id="radiusRow">圆角<input type="number" min="0" max="999" id="radius" /></label
-              ><label id="borderWidthRow">边框粗细<input type="number" min="0" max="20" id="borderWidth" /></label
-              ><label id="fontRow">字号<input type="number" min="8" max="100" id="fontSize" /></label>
-            </div>
-            <div id="shapeRow">
-              <span class="hint">常用形状</span>
-              <div class="colorline">
-                <button data-radius="0">直角</button><button data-radius="8">小圆角</button
-                ><button data-radius="16">大圆角</button><button data-radius="999">胶囊</button>
-              </div>
-            </div>
           </details>
         </div>
         <div id="multi" hidden><p class="hint">对选中的对象调整对齐方式：</p><div class="alignment">
@@ -744,7 +807,61 @@
           stage.draw();
           positionQuick();
         }
+        function fitNodes(nodes) {
+          if (!nodes.length) { $("status").textContent = "画布上还没有对象。"; return; }
+          const rects = nodes.map(n => {
+            if (typeof n.getClientRect === "function") return n.getClientRect({ relativeTo: layer });
+            const parent = n.hasName("board") ? null : parentBoard(n);
+            return { x: n.x() + (parent ? parent.x() : 0), y: n.y() + (parent ? parent.y() : 0), width: n.width(), height: n.height() };
+          });
+          const left = Math.min(...rects.map(r => r.x)), top = Math.min(...rects.map(r => r.y));
+          const right = Math.max(...rects.map(r => r.x + r.width)), bottom = Math.max(...rects.map(r => r.y + r.height));
+          zoom = Math.max(0.02, Math.min(2, Math.max(1, stage.width() - 80) / Math.max(1, right - left), Math.max(1, stage.height() - 80) / Math.max(1, bottom - top)));
+          stage.scale({ x: zoom, y: zoom });
+          stage.position({ x: stage.width() / 2 - (left + right) * zoom / 2, y: stage.height() / 2 - (top + bottom) * zoom / 2 });
+          coverBackground(); $("zoomLabel").textContent = Math.round(zoom * 100) + "%";
+          stage.draw(); positionQuick();
+        }
+        $("fitSelection").onclick = () => fitNodes(selection.length ? selection : activeBoard ? [activeBoard] : [...boards(), ...items()]);
+        $("fitAll").onclick = () => fitNodes([...boards(), ...items()]);
+        $("actualSize").onclick = () => setZoom(1);
+        function showMobilePanel(name) {
+          $("workspaceLayout").dataset.mobilePanel = name;
+          for (const [id, panel] of [["mobileAssets", "assets"], ["mobileCanvas", "canvas"], ["mobileProperties", "properties"]])
+            $(id).setAttribute("aria-pressed", String(panel === name));
+        }
+        $("mobileAssets").onclick = () => showMobilePanel("assets");
+        $("mobileCanvas").onclick = () => showMobilePanel("canvas");
+        $("mobileProperties").onclick = () => showMobilePanel("properties");
+        function showLeftPanel(name) {
+          for (const [tab, panel] of [["tabAssets", "panelAssets"], ["tabLayers", "panelLayers"]]) {
+            const selected = panel === name;
+            $(tab).setAttribute("aria-selected", String(selected)); $(panel).hidden = !selected;
+            $(tab).tabIndex = selected ? 0 : -1;
+          }
+        }
+        $("tabAssets").onclick = () => showLeftPanel("panelAssets");
+        $("tabLayers").onclick = () => showLeftPanel("panelLayers");
+        $("emptyAdd").onclick = () => { $("addBoard").click(); fitNodes([activeBoard]); };
+        $("emptyImport").onclick = () => { showMobilePanel("assets"); showLeftPanel("panelAssets"); $("screenshotPanel").open = true; $("agentFile").scrollIntoView({ block: "nearest" }); $("agentFile").click(); };
+        $("emptyHelp").onclick = () => { $("canvasHelp").open = true; $("canvasHelp").scrollIntoView({ block: "nearest" }); };
+        document.querySelectorAll('[role="tablist"]').forEach(list => {
+          const tabs = Array.from(list.querySelectorAll('[role="tab"]'));
+          tabs.forEach(tab => tab.tabIndex = tab.getAttribute("aria-selected") === "true" ? 0 : -1);
+          list.addEventListener("click", event => {
+            const active = event.target.closest('[role="tab"]');
+            if (active) tabs.forEach(tab => tab.tabIndex = tab === active ? 0 : -1);
+          });
+          list.addEventListener("keydown", event => {
+            const current = tabs.indexOf(document.activeElement);
+            if (current < 0 || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+            event.preventDefault();
+            const next = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : (current + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+            tabs[next].click(); tabs[next].focus();
+          });
+        });
         new ResizeObserver(() => {
+          if (!$("viewport").clientWidth || !$("viewport").clientHeight) return;
           stage.size({ width: $("viewport").clientWidth, height: $("viewport").clientHeight });
           coverBackground();
           stage.draw();
@@ -935,7 +1052,7 @@
               );
           } else if (d.type === "image") {
             const image = new Image();
-            const picture = new Konva.Image({ width: w, height: h, listening: false });
+            const picture = new Konva.Image({ width: w, height: h });
             g.add(picture);
             image.onload = () => { picture.image(image); if (g.getStage()) g.getLayer().batchDraw(); };
             image.src = d.imageData || "";
@@ -1282,14 +1399,21 @@
         function updateLayers() {
           const list = $("layers");
           list.replaceChildren();
-          boards().forEach((b) => {
+          const addRow = (node, child = false) => {
             const button = document.createElement("button");
-            button.textContent =
-              (b === activeBoard ? "● " : "○ ") + b.getAttr("itemName") + " · " + b.find(".item").length + " 项";
-            button.className = b === activeBoard ? "active" : "";
-            button.onclick = () => setSelection([b]);
+            button.type = "button";
+            button.className = child ? "layer-child" : "";
+            button.textContent = node.getAttr("itemName") || types[node.getAttr("type")] || "未命名对象";
+            button.setAttribute("aria-pressed", String(selection.includes(node)));
+            button.onclick = (event) => setSelection(event.shiftKey ? (selection.includes(node) ? selection.filter(n => n !== node) : [...selection, node]) : [node]);
             list.append(button);
+          };
+          boards().forEach(board => {
+            addRow(board);
+            Array.from(board.getChildren()).filter(n => n.hasName("item")).forEach(n => addRow(n, true));
           });
+          Array.from(free.getChildren()).filter(n => n.hasName("item")).forEach(n => addRow(n));
+          if (!list.childElementCount) list.textContent = "还没有对象，请到素材中添加画板或模块。";
         }
         function setSelection(a) {
           selection = a;
@@ -1327,6 +1451,7 @@
             相对画板位置: { 左: Math.round(n.x()), 上: Math.round(n.y()) },
             尺寸: { 宽: Math.round(n.width() * n.scaleX()), 高: Math.round(n.height() * n.scaleY()) },
             文字: a.label,
+            识别文字: a.type === "text" ? !!a.ocrText : undefined,
             按钮数量: a.type === "group" ? a.count : undefined,
             基础样式: a.type === "group" ? a.preset || "A" : undefined,
             图标: a.type === "icon" ? a.iconName : undefined,
@@ -1381,6 +1506,7 @@
             : "请选择画板或元素。";
         }
         function refresh() {
+          $("emptyState").hidden = boards().length > 0 || items().length > 0;
           let one = selection.length === 1,
             n = selection[0];
           $("selection").textContent = selection.length
@@ -1427,7 +1553,7 @@
               a.type === "button" ? "点击后颜色" : a.type === "chart" ? "图表第二色" : "选中颜色";
             $("colorRow").hidden = isBoard || a.type === "icon";
             $("strokeRow").hidden = false;
-            $("strokeRow").firstChild.textContent = a.type === "chart" ? "图表第三色" : "边框／线条颜色";
+            $("strokeLabel").textContent = a.type === "chart" ? "图表第三色" : "边框／线条颜色";
             $("radiusRow").hidden = !isBoard && ["chart", "icon", "text"].includes(a.type);
             $("borderWidthRow").hidden = !isBoard && ["chart", "icon", "text"].includes(a.type);
             $("shapeRow").hidden = !isBoard && ["chart", "icon", "text"].includes(a.type);
@@ -1439,15 +1565,20 @@
               y: Math.round(n.y()),
               width: Math.round(n.width()),
               height: Math.round(n.height()),
-              fill: a.fill || "#ffffff",
+              fill: a.fill === "transparent" ? "#ffffff" : a.fill || "#ffffff",
               accent: a.accent || "#526a91",
               color: a.color || "#273d4c",
-              stroke: a.stroke || "#526a91",
+              stroke: a.stroke === "transparent" ? "#526a91" : a.stroke || "#526a91",
               radius: a.radius || 0,
               fontSize: a.fontSize || 14,
               count: a.count || 2, constraintX: a.constraintX || "start", constraintY: a.constraintY || "start", borderWidth: a.borderWidth ?? 1, layoutMode: a.layoutMode || "free", layoutGap: a.layoutGap ?? 8, layoutPadding: a.layoutPadding ?? 12,
             }))
               $(id).value = val;
+            for (const prop of ["fill", "stroke"]) {
+              const transparent = a[prop] === "transparent";
+              $(prop + "Transparent").checked = transparent;
+              $(prop).disabled = transparent;
+            }
           }
           if (!one) $("interactionRow").hidden = true;
           updateSummary();
@@ -1760,6 +1891,15 @@
             updateSummary();
             positionQuick();
           });
+        for (const prop of ["fill", "stroke"]) {
+          $(prop + "Transparent").addEventListener("change", () => {
+            if (selection.length !== 1) return;
+            const node = selection[0];
+            node.setAttr(prop, $(prop + "Transparent").checked ? "transparent" : $(prop).value);
+            if (node.hasName("board")) redrawBoard(node); else drawItem(node);
+            refresh(); transformer.forceUpdate(); layer.batchDraw(); positionQuick();
+          });
+        }
         document.querySelectorAll("[data-radius]").forEach(
           (b) =>
             (b.onclick = () => {
@@ -1970,8 +2110,8 @@
             }
             function col(v, def) {
               if (v === undefined) return def;
-              if (typeof v !== "string" || !/^#[0-9a-f]{6}$/i.test(v))
-                throw Error("颜色请使用 # 加六位色值，例如 #526a91。");
+              if (typeof v !== "string" || (v !== "transparent" && !/^#[0-9a-f]{6}$/i.test(v)))
+                throw Error("颜色请使用 # 加六位色值或 transparent，例如 #526a91。");
               return v;
             }
             function parse(o, depth = 0) {
@@ -2002,6 +2142,7 @@
                 ...base,
                 ...v,
                 label: String(o.文字 ?? base.label ?? "").slice(0, 300),
+                ocrText: type === "text" && o.识别文字 === true,
                 fill: col(o.背景, base.fill),
                 color: col(o.文字颜色, base.color),
                 stroke: col(o.边框颜色, base.stroke),
@@ -2150,7 +2291,7 @@
           };
           preview.onpointermove = update;
           preview.onpointerup = e => { update(e); start = null; };
-          preview.onpointercancel = () => { start = null; };
+          preview.onpointercancel = () => { start = null; rect = null; box.hidden = true; apply.disabled = true; };
           $("regionCancel").onclick = () => dialog.close("cancel");
           apply.onclick = () => dialog.close("apply");
           dialog.returnValue = "";
@@ -2214,8 +2355,13 @@
             activeBoard = draft; setSelection([draft]); refresh(); checkpoint();
             agentMessage(elements ? "已生成 " + elements.length + " 个可编辑元素。模型结果是估计值，请对照截图检查文字、颜色和位置；交互不会自动还原。" : "已在截图右边生成 " + Math.min(lines.length, 300) + " 个可编辑文字。颜色、图标、外框和交互尚未自动还原，请对照原图调整。");
           } catch (e) { agentMessage("识别失败：" + (e.message || "请检查网络后重试")); }
-          finally { if (worker) await worker.terminate(); agentBusy = false; $("agentAnalyze").disabled = false; }
+          finally { await finishOcr(worker); }
         };
+        async function finishOcr(worker) {
+          try { if (worker) await worker.terminate(); }
+          catch (error) { console.warn("OCR worker cleanup failed", error); }
+          finally { agentBusy = false; $("agentAnalyze").disabled = false; }
+        }
         function serialize() {
           return boards().map((b) => ({
             id: b.id(),
@@ -2287,3 +2433,5 @@
     </script>
   </body>
 </html>
+
+
